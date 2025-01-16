@@ -1,0 +1,11 @@
+{
+  "method": "GET",
+  "url": "https://api.github.com/user/emails",
+  "json": [
+    {
+      "primary": true,
+      "email": "octocat@github.com",
+      "verified": true
+    }
+  ]
+}

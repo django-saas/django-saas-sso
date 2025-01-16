@@ -2,6 +2,7 @@ import typing as t
 import uuid
 from django.views.generic import RedirectView, View
 from django.http.response import Http404, HttpResponseRedirect
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.shortcuts import render
 from django.urls import reverse
 from django.conf import settings
@@ -11,8 +12,9 @@ from django.contrib.auth.models import AbstractUser
 from saas_base.models import UserEmail
 from saas_base.signals import after_signup_user, after_login_user
 from ..models import UserIdentity
-from ..backends import get_sso_provider, OAuth2Provider, MismatchStateError
+from ..backends import get_sso_provider, MismatchStateError
 from ..types import UserInfo
+from ..settings import sso_settings
 
 
 class LoginView(RedirectView):
@@ -27,16 +29,20 @@ class LoginView(RedirectView):
 
 
 class AuthorizedView(View):
-    @staticmethod
-    def filter_user_by_email(email: str):
+    def trust_email_verified_login(self, userinfo: UserInfo):
         try:
-            user_email = UserEmail.objects.get_by_email(email)
+            user_email = UserEmail.objects.get_by_email(userinfo["email"])
+            UserIdentity.objects.create(
+                strategy=self.kwargs['strategy'],
+                user_id=user_email.user_id,
+                subject=userinfo["sub"],
+                profile=userinfo,
+            )
+            return self.login_user(user_email.user)
         except UserEmail.DoesNotExist:
-            return None
-        return user_email.user_id
+            return self.create_user_login(userinfo)
 
-    @staticmethod
-    def create_user(userinfo: UserInfo):
+    def create_user_login(self, userinfo: UserInfo):
         username = userinfo.get("preferred_username")
         cls: t.Type[AbstractUser] = get_user_model()
         try:
@@ -53,6 +59,13 @@ class AuthorizedView(View):
                 first_name=userinfo.get("given_name"),
                 last_name=userinfo.get("family_name"),
             )
+
+        UserIdentity.objects.create(
+            strategy=self.kwargs['strategy'],
+            user=user,
+            subject=userinfo["sub"],
+            profile=userinfo,
+        )
         # auto add user email
         if userinfo["email_verified"]:
             UserEmail.objects.create(
@@ -61,19 +74,31 @@ class AuthorizedView(View):
                 verified=True,
                 primary=True,
             )
-        return user
-
-    @staticmethod
-    def create_identity(provider: OAuth2Provider, user_id: int, userinfo: UserInfo):
-        return UserIdentity.objects.create(
-            strategy=provider.strategy,
-            user_id=user_id,
-            subject=userinfo["sub"],
-            profile=userinfo,
+        after_signup_user.send(
+            self.__class__,
+            user=user,
+            request=self.request,
+            strategy=self.kwargs['strategy'],
         )
+        return self.login_user(user)
 
     def login_user(self, user: AbstractUser):
         login(self.request, user, 'django.contrib.auth.backends.ModelBackend')
+        after_login_user.send(
+            self.__class__,
+            user=user,
+            request=self.request,
+            strategy=self.kwargs['strategy'],
+        )
+        next_url = self.request.session.get("next_url")
+        if next_url:
+            url_is_safe = url_has_allowed_host_and_scheme(
+                url=next_url,
+                allowed_hosts={self.request.get_host()},
+                require_https=self.request.is_secure(),
+            )
+            if url_is_safe:
+                return HttpResponseRedirect(next_url)
         return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
 
     def get(self, request, *args, **kwargs):
@@ -87,29 +112,20 @@ class AuthorizedView(View):
                 "message": "OAuth parameter state does not match."
             }
             return render(request, "saas/error.html", context={"error": error}, status=400)
-        userinfo = provider.fetch_userinfo(token)
-        if userinfo["email_verified"]:
-            user_id = self.filter_user_by_email(userinfo["email"])
-            if user_id:
-                identity = self.create_identity(provider, user_id, userinfo)
-                user = identity.user
-                after_login_user.send(
-                    self.__class__,
-                    user=user,
-                    request=request,
-                    strategy=provider.strategy,
-                )
-                return self.login_user(user)
 
-        user = self.create_user(userinfo)
-        after_signup_user.send(
-            self.__class__,
-            user=user,
-            request=request,
-            strategy=provider.strategy,
-        )
-        self.create_identity(provider, user.pk, userinfo)
-        return self.login_user(user)
+        userinfo = provider.fetch_userinfo(token)
+        try:
+            identity = UserIdentity.objects.select_related('user').get(
+                strategy=provider.strategy,
+                subject=userinfo["sub"],
+            )
+            return self.login_user(identity.user)
+        except UserIdentity.DoesNotExist:
+            pass
+
+        if userinfo["email_verified"] and sso_settings.TRUST_EMAIL_VERIFIED:
+            return self.trust_email_verified_login(userinfo)
+        return self.create_user_login(userinfo)
 
 
 def _get_provider(strategy: str):

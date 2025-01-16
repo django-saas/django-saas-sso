@@ -58,22 +58,24 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
 }
-SAAS_SSO = [
-    {
-        'backend': 'saas_sso.backends.GoogleProvider',
-        'options': {
-            'client_id': 'google_client_id',
-            'client_secret': 'google_client_secret',
+SAAS_SSO = {
+    'PROVIDERS': [
+        {
+            'backend': 'saas_sso.backends.GoogleProvider',
+            'options': {
+                'client_id': 'google_client_id',
+                'client_secret': 'google_client_secret',
+            },
         },
-    },
-    {
-        'backend': 'saas_sso.backends.GitHubProvider',
-        'options': {
-            'client_id': 'github_client_id',
-            'client_secret': 'github_client_secret',
+        {
+            'backend': 'saas_sso.backends.GitHubProvider',
+            'options': {
+                'client_id': 'github_client_id',
+                'client_secret': 'github_client_secret',
+            },
         },
-    },
-]
+    ]
+}
 USE_TZ = True
 TIME_ZONE = 'UTC'
 ROOT_URLCONF = 'tests.urls'

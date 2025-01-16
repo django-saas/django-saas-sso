@@ -1,7 +1,7 @@
 [project]
 name = "django-saas-sso"
 version = "0.1.0"
-description = "The domain module for building a SaaS product with Django"
+description = "The sso module for building a SaaS product with Django"
 authors = [
     { name = "Hsiaoming Yang", email = "me@lepture.com" }
 ]
@@ -54,7 +54,7 @@ test-cov = "pytest --cov --cov-report=html"
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/saas_domain"]
+packages = ["src/saas_sso"]
 
 [tool.hatch.build.targets.sdist]
 exclude = [
@@ -77,7 +77,7 @@ source = ["src"]
 
 [tool.coverage.run]
 branch = true
-source = ["saas_domain"]
+source = ["saas_sso"]
 omit = ["*/migrations/*"]
 
 [tool.coverage.report]

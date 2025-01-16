@@ -1,0 +1,8 @@
+{
+  "method": "POST",
+  "url": "https://github.com/login/oauth/access_token",
+  "json": {
+    "access_token": "access",
+    "expires_in": 3600
+  }
+}

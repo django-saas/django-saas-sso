@@ -1,7 +1,10 @@
 from django.core.signals import setting_changed
 from saas_base.settings import Settings
 
-DEFAULTS = {'PROVIDERS': []}
+DEFAULTS = {
+    'TRUST_EMAIL_VERIFIED': False,
+    'PROVIDERS': [],
+}
 
 
 class SSOSettings(Settings):
@@ -9,6 +12,7 @@ class SSOSettings(Settings):
         'PROVIDERS',
     ]
 
+    @property
     def sso_providers(self):
         return {provider.strategy: provider for provider in self.PROVIDERS}
 

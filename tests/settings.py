@@ -20,6 +20,10 @@ TEMPLATES = [
         }
     }
 ]
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "saas_sso.auth_backends.UserIdentityBackend",
+]
 MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',

@@ -9,6 +9,10 @@ DATABASES = {
         "NAME": "db.sqlite3",
     }
 }
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "saas_sso.auth_backends.UserIdentityBackend",
+]
 MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

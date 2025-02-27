@@ -1,19 +1,12 @@
-import typing as t
-import uuid
 from django.views.generic import RedirectView, View
 from django.http.response import Http404, HttpResponseRedirect
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.shortcuts import render
 from django.urls import reverse
 from django.conf import settings
-from django.db.utils import IntegrityError
-from django.contrib.auth import get_user_model, authenticate, login
-from django.contrib.auth.models import AbstractUser
-from saas_base.models import UserEmail
-from saas_base.signals import after_signup_user, after_login_user
-from ..models import UserIdentity
+from django.contrib.auth import authenticate, login
+from saas_base.signals import after_login_user
 from ..backends import MismatchStateError
-from ..types import UserInfo
 from ..settings import sso_settings
 
 

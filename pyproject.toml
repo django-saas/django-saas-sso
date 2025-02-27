@@ -47,6 +47,9 @@ dev = [
     "requests-mock",
     "python-dotenv",
 ]
+lint = [
+    "ruff",
+]
 
 [tool.hatch.metadata]
 allow-direct-references = true

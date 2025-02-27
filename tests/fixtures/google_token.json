@@ -1,0 +1,8 @@
+{
+  "method": "POST",
+  "url": "https://oauth2.googleapis.com/token",
+  "json": {
+    "access_token": "access",
+    "expires_in": 3600
+  }
+}

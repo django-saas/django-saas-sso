@@ -8,7 +8,7 @@ class TestUserIdentities(SaasTestCase):
     def test_list_empty_identities(self):
         self.force_login()
 
-        resp = self.client.get('/m/user/identities')
+        resp = self.client.get('/m/identities/')
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json(), [])
 
@@ -20,6 +20,6 @@ class TestUserIdentities(SaasTestCase):
             profile={'name': 'Google', 'email': 'google-1@gmail.com'},
         )
         self.force_login()
-        resp = self.client.get('/m/user/identities')
+        resp = self.client.get('/m/identities/')
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(len(resp.json()), 1)

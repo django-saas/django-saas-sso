@@ -1,12 +1,12 @@
 from rest_framework.request import Request
 from rest_framework.mixins import ListModelMixin
-from saas_base.drf.views import Endpoint
+from saas_base.drf.views import AuthenticatedEndpoint
 from ..models import UserIdentity
 from ..serializers import UserIdentitySerializer
 
 
-class UserIdentityListEndpoint(ListModelMixin, Endpoint):
-    resource_scopes = ["user:read"]
+class UserIdentityListEndpoint(ListModelMixin, AuthenticatedEndpoint):
+    resource_scopes = ["user"]
     pagination_class = None
     serializer_class = UserIdentitySerializer
 

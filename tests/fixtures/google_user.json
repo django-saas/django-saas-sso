@@ -1,0 +1,12 @@
+{
+  "method": "GET",
+  "url": "https://openidconnect.googleapis.com/v1/userinfo",
+  "json": {
+    "sub": "example@gmail.com",
+    "email": "example@gmail.com",
+    "email_verified": true,
+    "preferred_username": "example",
+    "given_name": "Example",
+    "family_name": ""
+  }
+}

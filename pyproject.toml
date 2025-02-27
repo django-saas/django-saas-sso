@@ -37,18 +37,14 @@ classifiers = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.rye]
-managed = true
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "drf_spectacular",
     "pytest",
     "pytest-django",
     "pytest-cov",
     "requests-mock",
 ]
-
-[tool.rye.scripts]
-test-cov = "pytest --cov --cov-report=html"
 
 [tool.hatch.metadata]
 allow-direct-references = true

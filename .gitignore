@@ -15,3 +15,5 @@ htmlcov
 
 # editor
 .idea
+
+uv.lock

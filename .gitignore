@@ -16,4 +16,7 @@ htmlcov
 # editor
 .idea
 
+# project
+.env
+db.sqlite3
 uv.lock

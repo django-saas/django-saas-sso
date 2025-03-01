@@ -11,14 +11,14 @@ coverage==7.6.12
 cryptography==44.0.1
 css-inline==0.14.6
 django==5.1.6
-django-saas-base==0.3.2
+django-saas-base==0.4.0
 djangorestframework==3.15.2
 drf-spectacular==0.28.0
 exceptiongroup==1.2.2 ; python_full_version < '3.11'
 idna==3.10
 inflection==0.5.1
 iniconfig==2.0.0
-joserfc==1.0.3
+joserfc==1.0.4
 jsonschema==4.23.0
 jsonschema-specifications==2024.10.1
 packaging==24.2

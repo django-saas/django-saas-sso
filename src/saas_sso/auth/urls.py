@@ -1,5 +1,5 @@
 from django.urls import path
-from .endpoints.auth import LoginView, AuthorizedView
+from ..endpoints.auth import LoginView, AuthorizedView
 
 app_name = 'saas_sso'
 

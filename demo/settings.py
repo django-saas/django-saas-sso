@@ -10,16 +10,16 @@ DATABASES = {
     }
 }
 AUTHENTICATION_BACKENDS = [
-    "saas_base.auth_backends.PasswordLoginBackend",
-    "saas_sso.auth_backends.UserIdentityBackend",
+    "saas_base.auth.backends.ModelBackend",
+    "saas_sso.auth.backends.UserIdentityBackend",
 ]
 MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'saas_base.drf.middleware.HeaderTenantIdMiddleware',
-    'saas_base.drf.middleware.TenantMiddleware',
+    'saas_base.middleware.HeaderTenantIdMiddleware',
+    'saas_base.middleware.TenantMiddleware',
 ]
 TEMPLATES = [
     {

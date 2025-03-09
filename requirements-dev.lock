@@ -8,10 +8,10 @@ cffi==1.17.1 ; platform_python_implementation != 'PyPy'
 charset-normalizer==3.4.1
 colorama==0.4.6 ; sys_platform == 'win32'
 coverage==7.6.12
-cryptography==44.0.1
+cryptography==44.0.2
 css-inline==0.14.6
-django==5.1.6
-django-saas-base==0.4.0
+django==5.1.7
+django-saas-base==0.5.0
 djangorestframework==3.15.2
 drf-spectacular==0.28.0
 exceptiongroup==1.2.2 ; python_full_version < '3.11'
@@ -24,7 +24,7 @@ jsonschema-specifications==2024.10.1
 packaging==24.2
 pluggy==1.5.0
 pycparser==2.22 ; platform_python_implementation != 'PyPy'
-pytest==8.3.4
+pytest==8.3.5
 pytest-cov==6.0.0
 pytest-django==4.10.0
 python-dotenv==1.0.1

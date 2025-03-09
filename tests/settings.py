@@ -21,14 +21,14 @@ TEMPLATES = [
     }
 ]
 AUTHENTICATION_BACKENDS = [
-    "saas_base.auth_backends.PasswordLoginBackend",
-    "saas_sso.auth_backends.UserIdentityBackend",
+    "saas_base.auth.backends.ModelBackend",
+    "saas_sso.auth.backends.UserIdentityBackend",
 ]
 MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'saas_base.drf.middleware.HeaderTenantIdMiddleware',
-    'saas_base.drf.middleware.TenantMiddleware',
+    'saas_base.middleware.HeaderTenantIdMiddleware',
+    'saas_base.middleware.TenantMiddleware',
 ]
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 CACHES = {

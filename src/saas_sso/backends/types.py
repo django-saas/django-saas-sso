@@ -8,12 +8,6 @@ OAuth2Token = t.TypedDict("OAuth2Token", {
     "id_token": str,
 }, total=False)
 
-OAuth2Options = t.TypedDict("OAuth2Options", {
-    "client_id": str,
-    "client_secret": str,
-    "scope": str,
-}, total=False)
-
 Placement = t.Literal['header', 'uri', 'body']
 
 

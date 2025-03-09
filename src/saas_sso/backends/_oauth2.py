@@ -9,7 +9,7 @@ from joserfc import jwt
 from joserfc.jwk import KeySet
 from joserfc.util import to_bytes, to_str
 from django.core.cache import cache
-from .types import OAuth2Token, OAuth2Options, Placement, UserInfo
+from .types import OAuth2Token, Placement, UserInfo
 
 __all__ = ["OAuth2Provider", "OAuth2Auth", "MismatchStateError"]
 
@@ -65,7 +65,13 @@ class OAuth2Provider(metaclass=ABCMeta):
     jwks: t.ClassVar[KeySet] = KeySet([])
 
     def __init__(self, **options):
-        self.options: OAuth2Options = options
+        self.options = options
+
+    def get_client_id(self) -> str:
+        return self.options["client_id"]
+
+    def get_client_secret(self) -> str:
+        return self.options["client_secret"]
 
     @classmethod
     def fetch_key_set(cls, force: bool = False) -> KeySet:
@@ -78,7 +84,7 @@ class OAuth2Provider(metaclass=ABCMeta):
         return jwks
 
     def create_authorization_url(self, redirect_uri: str) -> str:
-        client_id = self.options["client_id"]
+        client_id = self.get_client_id()
         scope = self.options.get("scope")
         if not scope:
             scope = self.scope
@@ -91,7 +97,7 @@ class OAuth2Provider(metaclass=ABCMeta):
             ("scope", scope),
             ("state", state),
         ]
-        client_secret = self.options["client_secret"]
+        client_secret = self.get_client_secret()
         cache.set(
             CACHE_PREFIX + state,
             {"client_secret": client_secret, **dict(params)},

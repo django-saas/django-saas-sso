@@ -66,6 +66,9 @@ exclude = [
 [tool.ruff]
 line-length = 120
 
+[tool.ruff.format]
+quote-style = "single"
+
 [tool.pytest.ini_options]
 addopts = "--no-migrations"
 pythonpath = ["src"]

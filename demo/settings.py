@@ -1,17 +1,18 @@
 import os
+
 DEBUG = True
 TESTING = True
 SECRET_KEY = 'django-insecure'
 ALLOWED_HOSTS = ['*']
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": "db.sqlite3",
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'db.sqlite3',
     }
 }
 AUTHENTICATION_BACKENDS = [
-    "saas_base.auth.backends.ModelBackend",
-    "saas_sso.auth.backends.UserIdentityBackend",
+    'saas_base.auth.backends.ModelBackend',
+    'saas_sso.auth.backends.UserIdentityBackend',
 ]
 MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -25,7 +26,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            "demo/templates",
+            'demo/templates',
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -35,7 +36,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ]
-        }
+        },
     }
 ]
 SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
@@ -48,9 +49,9 @@ CACHES = {
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-        "OPTIONS": {
-            "min_length": 8,
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,
         },
     },
 ]
@@ -65,7 +66,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'saas_base',
     'saas_base.drf',
-    "saas_sso",
+    'saas_sso',
 ]
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
@@ -102,7 +103,7 @@ SAAS_SSO = {
                 'client_secret': os.getenv('GITHUB_CLIENT_SECRET'),
             },
         },
-    ]
+    ],
 }
 
 STATIC_URL = 'static/'

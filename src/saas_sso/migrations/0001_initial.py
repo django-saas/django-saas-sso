@@ -7,7 +7,6 @@ from django.utils import timezone
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -24,7 +23,10 @@ class Migration(migrations.Migration):
                 ('profile', models.JSONField(blank=True)),
                 ('created_at', models.DateTimeField(default=timezone.now)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('user', models.ForeignKey(on_delete=models.CASCADE, related_name='identities', to=settings.AUTH_USER_MODEL)),
+                (
+                    'user',
+                    models.ForeignKey(on_delete=models.CASCADE, related_name='identities', to=settings.AUTH_USER_MODEL),
+                ),
             ],
             options={
                 'verbose_name': 'identity',

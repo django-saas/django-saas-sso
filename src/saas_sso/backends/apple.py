@@ -9,7 +9,7 @@ from .types import OAuth2Token
 class AppleProvider(OAuth2Provider):
     name = 'Apple'
     strategy = 'apple'
-    token_endpoint_auth_method = "client_secret_post"
+    token_endpoint_auth_method = 'client_secret_post'
     authorization_endpoint = 'https://appleid.apple.com/auth/authorize'
     token_endpoint = 'https://appleid.apple.com/auth/token'
     jwks_uri = 'https://appleid.apple.com/auth/keys'
@@ -30,21 +30,21 @@ class AppleProvider(OAuth2Provider):
         headers = {'kid': key_id, 'alg': 'ES256'}
         now = int(time.time())
         payload = {
-            "iss": team_id,
-            "iat": now,
-            "exp": now + 600,  # 10 minutes expiry
-            "aud": self.issuer,
-            "sub": client_id,
+            'iss': team_id,
+            'iat': now,
+            'exp': now + 600,  # 10 minutes expiry
+            'aud': self.issuer,
+            'sub': client_id,
         }
         return jwt.encode(headers, payload, self.private_key)
 
     def fetch_userinfo(self, token: OAuth2Token):
-        id_token = token.pop("id_token", None)
+        id_token = token.pop('id_token', None)
         claims_registry = jwt.JWTClaimsRegistry(
             leeway=100,
-            iss={"essential": True, "value": self.issuer},
-            sub={"essential": True},
-            email={"essential": True},
+            iss={'essential': True, 'value': self.issuer},
+            sub={'essential': True},
+            email={'essential': True},
         )
         _tok = self.extract_id_token(id_token)
         claims_registry.validate(_tok.claims)

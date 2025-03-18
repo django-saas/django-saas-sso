@@ -15,7 +15,7 @@ class GitHubProvider(OAuth2Provider):
         resp.raise_for_status()
         user = resp.json()
         email_info = self.fetch_primary_email(token)
-        name = user.get("name")
+        name = user.get('name')
         if name:
             parts = name.split()
             given_name = parts[0]
@@ -24,25 +24,25 @@ class GitHubProvider(OAuth2Provider):
             else:
                 family_name = None
         else:
-            given_name = user["login"]
+            given_name = user['login']
             family_name = None
         info = {
-            "sub": str(user["id"]),
-            "preferred_username": user["login"],
-            "picture": user["avatar_url"],
-            "website": user.get("blog"),
-            "given_name": given_name,
-            "family_name": family_name,
-            "email": email_info.get("email"),
-            "email_verified": email_info.get("verified"),
+            'sub': str(user['id']),
+            'preferred_username': user['login'],
+            'picture': user['avatar_url'],
+            'website': user.get('blog'),
+            'given_name': given_name,
+            'family_name': family_name,
+            'email': email_info.get('email'),
+            'email_verified': email_info.get('verified'),
         }
         return info
 
     def fetch_primary_email(self, token: OAuth2Token):
-        resp = self.get("https://api.github.com/user/emails", token=token)
+        resp = self.get('https://api.github.com/user/emails', token=token)
         resp.raise_for_status()
         emails = resp.json()
-        primaries = [d for d in emails if d["primary"]]
+        primaries = [d for d in emails if d['primary']]
         if primaries:
             return primaries[0]
         if emails:

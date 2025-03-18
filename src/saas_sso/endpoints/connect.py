@@ -21,14 +21,14 @@ class ConnectAuthorizedView(LoginRequiredMixin, AuthorizedView):
                 user=request.user,
                 strategy=strategy,
                 defaults={
-                    'subject': userinfo["sub"],
+                    'subject': userinfo['sub'],
                     'profile': userinfo,
-                }
+                },
             )
         except IntegrityError:
             error = {
-                "title": "Connection Error",
-                "code": 400,
-                "message": f"This {provider.name} account is already connected to another user."
+                'title': 'Connection Error',
+                'code': 400,
+                'message': f'This {provider.name} account is already connected to another user.',
             }
-            return render(request, "saas/error.html", context={"error": error}, status=400)
+            return render(request, 'saas/error.html', context={'error': error}, status=400)

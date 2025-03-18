@@ -14,11 +14,11 @@ class LoginView(RedirectView):
     redirect_url_name = 'saas_sso:auth'
 
     def get_redirect_url(self, *args, **kwargs):
-        next_url = self.request.GET.get("next")
+        next_url = self.request.GET.get('next')
         if next_url:
-            self.request.session["next_url"] = next_url
+            self.request.session['next_url'] = next_url
 
-        provider = _get_provider(kwargs["strategy"])
+        provider = _get_provider(kwargs['strategy'])
         redirect_uri = reverse(self.redirect_url_name, kwargs=kwargs)
         return provider.create_authorization_url(self.request.build_absolute_uri(redirect_uri))
 
@@ -27,7 +27,7 @@ class AuthorizedView(View):
     redirect_url = settings.LOGIN_REDIRECT_URL
 
     def authorize(self, request, token, **kwargs):
-        user = authenticate(request, strategy=kwargs["strategy"], token=token)
+        user = authenticate(request, strategy=kwargs['strategy'], token=token)
         login(request, user)
         after_login_user.send(
             self.__class__,
@@ -37,22 +37,18 @@ class AuthorizedView(View):
         )
 
     def get(self, request, *args, **kwargs):
-        provider = _get_provider(kwargs["strategy"])
+        provider = _get_provider(kwargs['strategy'])
         try:
             token = provider.fetch_token(request)
         except MismatchStateError:
-            error = {
-                "title": "OAuth Error",
-                "code": 400,
-                "message": "OAuth parameter state does not match."
-            }
-            return render(request, "saas/error.html", context={"error": error}, status=400)
+            error = {'title': 'OAuth Error', 'code': 400, 'message': 'OAuth parameter state does not match.'}
+            return render(request, 'saas/error.html', context={'error': error}, status=400)
 
         result = self.authorize(request, token, **kwargs)
         if result and isinstance(result, HttpResponse):
             return result
 
-        next_url = self.request.session.get("next_url")
+        next_url = self.request.session.get('next_url')
         if next_url:
             url_is_safe = url_has_allowed_host_and_scheme(
                 url=next_url,

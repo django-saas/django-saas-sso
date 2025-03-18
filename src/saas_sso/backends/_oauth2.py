@@ -11,9 +11,9 @@ from joserfc.util import to_bytes, to_str
 from django.core.cache import cache
 from .types import OAuth2Token, Placement, UserInfo
 
-__all__ = ["OAuth2Provider", "OAuth2Auth", "MismatchStateError"]
+__all__ = ['OAuth2Provider', 'OAuth2Auth', 'MismatchStateError']
 
-CACHE_PREFIX = "saas:oauth2state:"
+CACHE_PREFIX = 'saas:oauth2state:'
 
 
 class MismatchStateError(Exception):
@@ -21,7 +21,7 @@ class MismatchStateError(Exception):
 
 
 class OAuth2Auth(AuthBase):
-    def __init__(self, access_token: str, placement: Placement = "header") -> None:
+    def __init__(self, access_token: str, placement: Placement = 'header') -> None:
         self.access_token = access_token
         self.placement = placement
 
@@ -37,24 +37,24 @@ class OAuth2Auth(AuthBase):
         return add_params_to_qs(body, [('access_token', self.access_token)])
 
     def __call__(self, req: PreparedRequest):
-        if self.placement == "header":
+        if self.placement == 'header':
             self.add_to_header(req.headers)
-        elif self.placement == "uri":
+        elif self.placement == 'uri':
             req.url = self.add_to_uri(req.url)
-        elif self.placement == "body":
+        elif self.placement == 'body':
             req.body = self.add_to_body(req.body)
         return req
 
 
 class OAuth2Provider(metaclass=ABCMeta):
-    TYPE: str = "oauth2"
+    TYPE: str = 'oauth2'
     STATE_EXPIRES_IN: int = 300
 
-    token_endpoint_auth_method: str = "client_secret_basic"
-    token_endpoint_headers: t.Dict[str, str] = {"Accept": "application/json"}
-    bearer_token_placement: Placement = "header"
+    token_endpoint_auth_method: str = 'client_secret_basic'
+    token_endpoint_headers: t.Dict[str, str] = {'Accept': 'application/json'}
+    bearer_token_placement: Placement = 'header'
 
-    name: str = "OAuth"
+    name: str = 'OAuth'
     strategy: str
     authorization_endpoint: str
     token_endpoint: str
@@ -69,10 +69,10 @@ class OAuth2Provider(metaclass=ABCMeta):
         self.options = options
 
     def get_client_id(self) -> str:
-        return self.options["client_id"]
+        return self.options['client_id']
 
     def get_client_secret(self) -> str:
-        return self.options["client_secret"]
+        return self.options['client_secret']
 
     @classmethod
     def fetch_key_set(cls, force: bool = False) -> KeySet:
@@ -86,22 +86,22 @@ class OAuth2Provider(metaclass=ABCMeta):
 
     def create_authorization_url(self, redirect_uri: str) -> str:
         client_id = self.get_client_id()
-        scope = self.options.get("scope")
+        scope = self.options.get('scope')
         if not scope:
             scope = self.scope
 
         state = uuid.uuid4().hex
         params = [
-            ("response_type", "code"),
-            ("client_id", client_id),
-            ("redirect_uri", redirect_uri),
-            ("scope", scope),
-            ("state", state),
+            ('response_type', 'code'),
+            ('client_id', client_id),
+            ('redirect_uri', redirect_uri),
+            ('scope', scope),
+            ('state', state),
         ]
         client_secret = self.get_client_secret()
         cache.set(
             CACHE_PREFIX + state,
-            {"client_secret": client_secret, **dict(params)},
+            {'client_secret': client_secret, **dict(params)},
             timeout=self.STATE_EXPIRES_IN,
         )
         return add_params_to_uri(self.authorization_endpoint, params)
@@ -109,7 +109,8 @@ class OAuth2Provider(metaclass=ABCMeta):
     def request(self, method: str, url: str, token: OAuth2Token, params=None, data=None, json=None, headers=None):
         auth = OAuth2Auth(token['access_token'], self.bearer_token_placement)
         return requests.request(
-            method, url,
+            method,
+            url,
             params=params,
             data=data,
             json=json,
@@ -119,26 +120,26 @@ class OAuth2Provider(metaclass=ABCMeta):
         )
 
     def get(self, url: str, token: OAuth2Token, params=None, headers=None):
-        return self.request("GET", url, token, params=params, headers=headers)
+        return self.request('GET', url, token, params=params, headers=headers)
 
     def fetch_token(self, request) -> OAuth2Token:
-        state: str = request.GET["state"]
+        state: str = request.GET['state']
         params = cache.get(CACHE_PREFIX + state)
         if not params:
             raise MismatchStateError()
 
-        code: str = request.GET["code"]
+        code: str = request.GET['code']
         data = {
-            "grant_type": "authorization_code",
-            "code": code,
-            "redirect_uri": params["redirect_uri"],
+            'grant_type': 'authorization_code',
+            'code': code,
+            'redirect_uri': params['redirect_uri'],
         }
-        if self.token_endpoint_auth_method == "client_secret_basic":
-            auth = (params["client_id"], params["client_secret"])
+        if self.token_endpoint_auth_method == 'client_secret_basic':
+            auth = (params['client_id'], params['client_secret'])
         else:
             auth = None
-            data["client_id"] = params["client_id"]
-            data["client_secret"] = params["client_secret"]
+            data['client_id'] = params['client_id']
+            data['client_secret'] = params['client_secret']
 
         resp = requests.post(
             self.token_endpoint,

@@ -6,7 +6,7 @@ from ..serializers import UserIdentitySerializer
 
 
 class UserIdentityListEndpoint(ListModelMixin, AuthenticatedEndpoint):
-    resource_scopes = ["user"]
+    resource_scopes = ['user']
     pagination_class = None
     serializer_class = UserIdentitySerializer
 

@@ -4,6 +4,10 @@ from .github import GitHubProvider
 from .apple import AppleProvider
 
 __all__ = [
-    'OAuth2Provider', 'OAuth2Auth', 'MismatchStateError',
-    'GoogleProvider', 'GitHubProvider', 'AppleProvider',
+    'OAuth2Provider',
+    'OAuth2Auth',
+    'MismatchStateError',
+    'GoogleProvider',
+    'GitHubProvider',
+    'AppleProvider',
 ]

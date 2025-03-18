@@ -19,14 +19,14 @@ class UserIdentity(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = _("identity")
-        verbose_name_plural = _("identities")
+        verbose_name = _('identity')
+        verbose_name_plural = _('identities')
         unique_together = [
             ['strategy', 'subject'],
             ['user', 'strategy'],
         ]
         ordering = ['strategy', 'subject']
-        db_table = "saas_user_identity"
+        db_table = 'saas_user_identity'
 
     def __str__(self):
         return self.subject

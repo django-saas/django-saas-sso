@@ -5,4 +5,4 @@ from .models import UserIdentity
 class UserIdentitySerializer(serializers.ModelSerializer):
     class Meta:
         model = UserIdentity
-        exclude = ["user"]
+        exclude = ['user']

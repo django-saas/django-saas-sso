@@ -9,7 +9,7 @@ ROOT = os.path.dirname(__file__)
 class FixturesTestCase(SaasTestCase):
     @staticmethod
     def load_fixture(name: str):
-        filename = os.path.join(ROOT, "fixtures", name)
+        filename = os.path.join(ROOT, 'fixtures', name)
         with open(filename) as f:
             data = json.load(f)
         return data

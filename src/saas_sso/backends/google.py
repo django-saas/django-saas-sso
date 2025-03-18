@@ -14,13 +14,13 @@ class GoogleProvider(OAuth2Provider):
     scope = 'openid profile email'
 
     def fetch_userinfo(self, token: OAuth2Token):
-        id_token = token.pop("id_token", None)
+        id_token = token.pop('id_token', None)
         if id_token:
             claims_registry = JWTClaimsRegistry(
                 leeway=100,
-                iss={"essential": True},
-                sub={"essential": True},
-                email={"essential": True},
+                iss={'essential': True},
+                sub={'essential': True},
+                email={'essential': True},
             )
             _tok = self.extract_id_token(id_token)
             claims_registry.validate(_tok.claims)

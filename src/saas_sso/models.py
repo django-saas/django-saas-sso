@@ -23,6 +23,7 @@ class UserIdentity(models.Model):
         verbose_name_plural = _("identities")
         unique_together = [
             ['strategy', 'subject'],
+            ['user', 'strategy'],
         ]
         ordering = ['strategy', 'subject']
         db_table = "saas_user_identity"

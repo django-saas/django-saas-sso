@@ -7,6 +7,7 @@ from .types import OAuth2Token
 
 
 class AppleProvider(OAuth2Provider):
+    name = 'Apple'
     strategy = 'apple'
     token_endpoint_auth_method = "client_secret_post"
     authorization_endpoint = 'https://appleid.apple.com/auth/authorize'

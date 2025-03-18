@@ -17,6 +17,7 @@ class UserIdentityBackend(ModelBackend):
     def authenticate(self, request, strategy=None, token=None, **kwargs):
         if strategy is None or token is None:
             return
+
         provider = sso_settings.get_sso_provider(strategy)
         if provider is None:
             return

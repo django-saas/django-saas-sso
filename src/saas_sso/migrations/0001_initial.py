@@ -31,7 +31,10 @@ class Migration(migrations.Migration):
                 'verbose_name_plural': 'identities',
                 'db_table': 'saas_user_identity',
                 'ordering': ['strategy', 'subject'],
-                'unique_together': {('strategy', 'subject')},
+                'unique_together': {
+                    ('strategy', 'subject'),
+                    ('user', 'strategy'),
+                },
             },
         ),
     ]

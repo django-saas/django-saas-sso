@@ -5,6 +5,7 @@ from .types import OAuth2Token
 
 
 class GoogleProvider(OAuth2Provider):
+    name = 'Google'
     strategy = 'google'
     authorization_endpoint = 'https://accounts.google.com/o/oauth2/v2/auth'
     token_endpoint = 'https://oauth2.googleapis.com/token'

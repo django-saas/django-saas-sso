@@ -54,6 +54,7 @@ class OAuth2Provider(metaclass=ABCMeta):
     token_endpoint_headers: t.Dict[str, str] = {"Accept": "application/json"}
     bearer_token_placement: Placement = "header"
 
+    name: str = "OAuth"
     strategy: str
     authorization_endpoint: str
     token_endpoint: str

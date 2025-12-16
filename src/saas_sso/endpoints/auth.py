@@ -20,7 +20,7 @@ class LoginView(RedirectView):
 
         provider = _get_provider(kwargs['strategy'])
         redirect_uri = reverse(self.redirect_url_name, kwargs=kwargs)
-        return provider.create_authorization_url(self.request.build_absolute_uri(redirect_uri))
+        return provider.create_authorization_url(self.request, redirect_uri)
 
 
 class AuthorizedView(View):

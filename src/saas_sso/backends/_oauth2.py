@@ -84,7 +84,7 @@ class OAuth2Provider(metaclass=ABCMeta):
         cls.jwks = jwks
         return jwks
 
-    def create_authorization_url(self, redirect_uri: str) -> str:
+    def create_authorization_url(self, request, redirect_uri: str) -> str:
         client_id = self.get_client_id()
         scope = self.options.get('scope')
         if not scope:
@@ -94,7 +94,7 @@ class OAuth2Provider(metaclass=ABCMeta):
         params = [
             ('response_type', 'code'),
             ('client_id', client_id),
-            ('redirect_uri', redirect_uri),
+            ('redirect_uri', request.build_absolute_uri(redirect_uri)),
             ('scope', scope),
             ('state', state),
         ]
@@ -104,6 +104,7 @@ class OAuth2Provider(metaclass=ABCMeta):
             {'client_secret': client_secret, **dict(params)},
             timeout=self.STATE_EXPIRES_IN,
         )
+        request.session[f'_state:{state}'] = '1'
         return add_params_to_uri(self.authorization_endpoint, params)
 
     def request(self, method: str, url: str, token: OAuth2Token, params=None, data=None, json=None, headers=None):
@@ -124,22 +125,25 @@ class OAuth2Provider(metaclass=ABCMeta):
 
     def fetch_token(self, request) -> OAuth2Token:
         state: str = request.GET['state']
-        params = cache.get(CACHE_PREFIX + state)
-        if not params:
+        if not request.session.get(f'_state:{state}'):
+            raise MismatchStateError()
+
+        cached_data = cache.get(CACHE_PREFIX + state)
+        if not cached_data:
             raise MismatchStateError()
 
         code: str = request.GET['code']
         data = {
             'grant_type': 'authorization_code',
             'code': code,
-            'redirect_uri': params['redirect_uri'],
+            'redirect_uri': cached_data['redirect_uri'],
         }
         if self.token_endpoint_auth_method == 'client_secret_basic':
-            auth = (params['client_id'], params['client_secret'])
+            auth = (cached_data['client_id'], cached_data['client_secret'])
         else:
             auth = None
-            data['client_id'] = params['client_id']
-            data['client_secret'] = params['client_secret']
+            data['client_id'] = cached_data['client_id']
+            data['client_secret'] = cached_data['client_secret']
 
         resp = requests.post(
             self.token_endpoint,
@@ -149,6 +153,7 @@ class OAuth2Provider(metaclass=ABCMeta):
             headers=self.token_endpoint_headers,
         )
         resp.raise_for_status()
+        request.session.delete(f'_state:{state}')
         return resp.json()
 
     def extract_id_token(self, id_token: str) -> jwt.Token:

@@ -4,9 +4,9 @@ from django.contrib.auth.backends import ModelBackend
 from django.db.utils import IntegrityError
 from saas_base.models import UserEmail
 from saas_base.signals import after_signup_user
-from ..models import UserIdentity
-from ..settings import sso_settings
-from ..types import UserInfo
+from saas_sso.models import UserIdentity
+from saas_sso.settings import sso_settings
+from saas_sso.types import UserInfo
 
 __all__ = ['UserIdentityBackend']
 

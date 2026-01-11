@@ -1,6 +1,6 @@
 from django.urls import path
-from ..endpoints.auth import LoginView, AuthorizedView
-from ..endpoints.connect import ConnectRedirectView, ConnectAuthorizedView
+from saas_sso.endpoints.auth import LoginView, AuthorizedView
+from saas_sso.endpoints.connect import ConnectRedirectView, ConnectAuthorizedView
 
 app_name = 'saas_sso'
 

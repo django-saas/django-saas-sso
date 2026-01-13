@@ -1,0 +1,11 @@
+{
+  "method": "GET",
+  "url": "https://api.github.com/user",
+  "json": {
+    "id": 999,
+    "login": "collision",
+    "avatar_url": "",
+    "name": "Collision User",
+    "email": "new@example.com"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "method": "GET",
+  "url": "https://api.github.com/user",
+  "json": {
+    "id": 777,
+    "login": "noprimary",
+    "avatar_url": "",
+    "name": "No Primary",
+    "email": null
+  }
+}

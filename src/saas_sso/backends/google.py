@@ -26,7 +26,7 @@ class GoogleProvider(OAuth2Provider):
             claims_registry.validate(_tok.claims)
             claims = _tok.claims
         else:
-            resp = requests.get(self.userinfo_endpoint)
+            resp = self.get(self.userinfo_endpoint, token=token)
             claims = resp.json()
 
         # use email's username as preferred_username

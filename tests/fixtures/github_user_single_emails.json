@@ -1,0 +1,5 @@
+{
+  "method": "GET",
+  "url": "https://api.github.com/user/emails",
+  "json": [{"email": "single@example.com", "primary": true, "verified": true}]
+}

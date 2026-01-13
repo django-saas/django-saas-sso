@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://openidconnect.googleapis.com/v1/userinfo",
+  "json": {
+    "sub": "google-unverified",
+    "email": "unverified@example.com",
+    "email_verified": false
+  }
+}

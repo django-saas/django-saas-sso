@@ -4,10 +4,15 @@ from joserfc.jwk import ECKey
 from urllib.parse import urlparse, parse_qs
 
 from requests_mock.mocker import Mocker
+from django.contrib.auth import get_user_model
+from django.conf import settings
+from django.test import override_settings
 
 from tests.client import FixturesTestCase
 from saas_base.models import UserEmail
 from saas_sso.models import UserIdentity
+
+UserModel = get_user_model()
 
 
 class TestOAuthLogin(FixturesTestCase):
@@ -21,7 +26,7 @@ class TestOAuthLogin(FixturesTestCase):
         state = params['state'][0]
         return state
 
-    def mock_apple_id_token(self, m: Mocker):
+    def generate_apple_id_token(self):
         key = ECKey.import_key(self.load_fixture('apple_private_key.p8'))
         now = int(time.time())
         claims = {
@@ -34,7 +39,10 @@ class TestOAuthLogin(FixturesTestCase):
             'email_verified': True,
         }
         header = {'kid': 'test-key-id', 'alg': 'ES256'}
-        id_token = jwt.encode(header, claims, key)
+        return jwt.encode(header, claims, key)
+
+    def mock_apple_id_token(self, m: Mocker):
+        id_token = self.generate_apple_id_token()
         m.register_uri(
             'POST',
             'https://appleid.apple.com/auth/token',
@@ -42,7 +50,31 @@ class TestOAuthLogin(FixturesTestCase):
                 'access_token': 'apple-access-token',
                 'expires_in': 3600,
                 'id_token': id_token,
-            }
+            },
+        )
+
+    def mock_google_id_token(self, m: Mocker):
+        key = ECKey.import_key(self.load_fixture('apple_private_key.p8'))
+        now = int(time.time())
+        claims = {
+            'iss': 'https://accounts.google.com',
+            'aud': 'google_client_id',
+            'exp': now + 3600,
+            'iat': now,
+            'sub': 'google-user-sub',
+            'email': 'google-id-token@example.com',
+            'email_verified': True,
+        }
+        header = {'kid': 'test-key-id', 'alg': 'ES256'}
+        id_token = jwt.encode(header, claims, key)
+        m.register_uri(
+            'POST',
+            'https://oauth2.googleapis.com/token',
+            json={
+                'access_token': 'google-access-token',
+                'expires_in': 3600,
+                'id_token': id_token,
+            },
         )
 
     def test_invalid_strategy(self):
@@ -86,6 +118,42 @@ class TestOAuthLogin(FixturesTestCase):
             resp = self.client.get(f'/m/auth/google/?state={state}&code=123')
             self.assertEqual(resp.status_code, 302)
 
+    def test_google_flow_with_id_token(self):
+        state = self.resolve_state('/m/login/google/')
+
+        with self.mock_requests('apple_jwks.json') as m:
+            # mock Google JWKS with Apple's (since we used Apple's key to sign)
+            m.register_uri(
+                'GET', 'https://www.googleapis.com/oauth2/v3/certs', json=self.load_fixture('apple_jwks.json')['json']
+            )
+            self.mock_google_id_token(m)
+            resp = self.client.get(f'/m/auth/google/?state={state}&code=123')
+            self.assertEqual(resp.status_code, 302)
+
+            # Verify identity created
+            identity = UserIdentity.objects.get(strategy='google', subject='google-user-sub')
+            self.assertEqual(identity.profile['email'], 'google-id-token@example.com')
+
+    def test_google_flow_with_preferred_username(self):
+        state = self.resolve_state('/m/login/google/')
+
+        with self.mock_requests('google_token.json', 'google_user_pref.json'):
+            resp = self.client.get(f'/m/auth/google/?state={state}&code=123')
+            self.assertEqual(resp.status_code, 302)
+            identity = UserIdentity.objects.get(strategy='google', subject='google-pref')
+            self.assertEqual(identity.user.username, 'google_user')
+
+    def test_google_flow_email_not_verified(self):
+        state = self.resolve_state('/m/login/google/')
+
+        with self.mock_requests('google_token.json', 'google_user_unverified.json'):
+            resp = self.client.get(f'/m/auth/google/?state={state}&code=123')
+            self.assertEqual(resp.status_code, 302)
+
+            # Verify user created but email NOT in UserEmail table
+            identity = UserIdentity.objects.get(strategy='google', subject='google-unverified')
+            self.assertFalse(UserEmail.objects.filter(user=identity.user, email='unverified@example.com').exists())
+
     def test_apple_flow(self):
         state = self.resolve_state('/m/login/apple/')
 
@@ -121,3 +189,93 @@ class TestOAuthLogin(FixturesTestCase):
             identity = UserIdentity.objects.get(strategy='apple', subject='apple-user-sub')
             self.assertEqual(identity.profile['given_name'], 'Apple')
             self.assertEqual(identity.profile['family_name'], 'User')
+
+    def test_apple_flow_code_exchange(self):
+        state = self.resolve_state('/m/login/apple/')
+        id_token = self.generate_apple_id_token()
+
+        with self.mock_requests('apple_jwks.json') as m:
+            m.register_uri(
+                'POST',
+                'https://appleid.apple.com/auth/token',
+                json={
+                    'access_token': 'apple-access-token',
+                    'expires_in': 3600,
+                    'id_token': id_token,
+                },
+            )
+            # NO id_token in POST data
+            resp = self.client.post(
+                '/m/auth/apple/',
+                data={'state': state, 'code': '123'},
+                format='multipart',
+            )
+            self.assertEqual(resp.status_code, 302)
+            self.assertTrue(UserIdentity.objects.filter(strategy='apple', subject='apple-user-sub').exists())
+
+    def test_auto_link_by_email(self):
+        # Create existing user with email
+        user = UserModel.objects.create_user(username='existing_user', email='auto-link@example.com')
+        UserEmail.objects.create(user=user, email='auto-link@example.com', verified=True, primary=True)
+
+        state = self.resolve_state('/m/login/google/')
+
+        new_saas_sso = settings.SAAS_SSO.copy()
+        new_saas_sso['TRUST_EMAIL_VERIFIED'] = True
+
+        # Google returns same email, verified
+        with override_settings(SAAS_SSO=new_saas_sso):
+            with self.mock_requests('google_token.json', 'google_user_autolink.json'):
+                resp = self.client.get(f'/m/auth/google/?state={state}&code=123')
+                self.assertEqual(resp.status_code, 302)
+
+                # Verify identity created for EXISTING user
+                self.assertTrue(
+                    UserIdentity.objects.filter(user=user, strategy='google', subject='google-sub-123').exists()
+                )
+                identity = UserIdentity.objects.get(strategy='google', subject='google-sub-123')
+                self.assertEqual(identity.user_id, user.id)
+
+    def test_duplicate_username_fallback(self):
+        # Create user with username 'collision'
+        UserModel.objects.create_user(username='collision', email='original@example.com')
+
+        state = self.resolve_state('/m/login/github/')
+
+        # GitHub user has login 'collision' but different email
+        with self.mock_requests('github_token.json', 'github_user_collision.json', 'github_user_collision_emails.json'):
+            resp = self.client.get(f'/m/auth/github/?state={state}&code=123')
+            self.assertEqual(resp.status_code, 302)
+
+            # Verify new user created with different username (UUID)
+            identity = UserIdentity.objects.get(strategy='github', subject='999')
+            self.assertNotEqual(identity.user.username, 'collision')
+            self.assertEqual(identity.user.email, 'new@example.com')
+
+    def test_github_name_parsing_single(self):
+        state = self.resolve_state('/m/login/github/')
+
+        with self.mock_requests('github_token.json', 'github_user_single.json', 'github_user_single_emails.json'):
+            resp = self.client.get(f'/m/auth/github/?state={state}&code=123')
+            self.assertEqual(resp.status_code, 302)
+
+            identity = UserIdentity.objects.get(strategy='github', subject='888')
+            self.assertEqual(identity.profile['given_name'], 'SingleName')
+            self.assertIsNone(identity.profile['family_name'])
+
+    def test_github_no_primary_email(self):
+        state = self.resolve_state('/m/login/github/')
+
+        with self.mock_requests('github_token.json', 'github_user_noprimary.json', 'github_user_noprimary_emails.json'):
+            resp = self.client.get(f'/m/auth/github/?state={state}&code=123')
+            self.assertEqual(resp.status_code, 302)
+
+            identity = UserIdentity.objects.get(strategy='github', subject='777')
+            # Should pick first email
+            self.assertEqual(identity.profile['email'], 'secondary@example.com')
+
+    def test_login_view_next_url(self):
+        resp = self.client.get('/m/login/github/?next=/dashboard')
+        self.assertEqual(resp.status_code, 302)
+        # Verify session has next_url
+        self.assertEqual(self.client.session.get('next_url'), '/dashboard')

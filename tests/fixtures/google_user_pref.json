@@ -1,0 +1,10 @@
+{
+  "method": "GET",
+  "url": "https://openidconnect.googleapis.com/v1/userinfo",
+  "json": {
+    "sub": "google-pref",
+    "email": "pref@example.com",
+    "email_verified": true,
+    "preferred_username": "google_user"
+  }
+}

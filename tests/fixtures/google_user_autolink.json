@@ -1,0 +1,11 @@
+{
+  "method": "GET",
+  "url": "https://openidconnect.googleapis.com/v1/userinfo",
+  "json": {
+    "sub": "google-sub-123",
+    "email": "auto-link@example.com",
+    "email_verified": true,
+    "given_name": "Link",
+    "family_name": "Me"
+  }
+}

@@ -135,13 +135,16 @@ class OAuth2Provider(metaclass=ABCMeta):
         return cached_data
 
     def fetch_token(self, request) -> OAuth2Token:
-        state: str = request.GET['state']
+        state = request.GET.get('state')
+        if not state:
+            raise MismatchStateError()
+
         if not request.session.get(f'_state:{state}'):
             raise MismatchStateError()
         request.session.delete(f'_state:{state}')
 
         cached_data = self.recover_cached_state(state)
-        code: str = request.GET['code']
+        code = request.GET.get('code')
         data = {
             'grant_type': 'authorization_code',
             'code': code,

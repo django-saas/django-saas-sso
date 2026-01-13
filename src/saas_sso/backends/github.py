@@ -19,8 +19,8 @@ class GitHubProvider(OAuth2Provider):
         if name:
             parts = name.split()
             given_name = parts[0]
-            if len(parts) == 2:
-                family_name = parts[1]
+            if len(parts) > 1:
+                family_name = ' '.join(parts[1:])
             else:
                 family_name = None
         else:

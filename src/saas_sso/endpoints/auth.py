@@ -26,28 +26,23 @@ class LoginView(RedirectView):
 class AuthorizedView(View):
     redirect_url = settings.LOGIN_REDIRECT_URL
 
-    def authorize(self, request, token, **kwargs):
-        user = authenticate(request, strategy=kwargs['strategy'], token=token)
-        login(request, user)
-        after_login_user.send(
-            self.__class__,
-            user=user,
-            request=self.request,
-            strategy=self.kwargs['strategy'],
-        )
-
     def get(self, request, *args, **kwargs):
-        provider = _get_provider(kwargs['strategy'])
+        return self._perform_request(request, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self._perform_request(request, **kwargs)
+
+    def _perform_request(self, request, **kwargs):
         try:
-            token = provider.fetch_token(request)
+            return self.perform_authorize(request, **kwargs)
         except MismatchStateError:
             error = {'title': 'OAuth Error', 'code': 400, 'message': 'OAuth parameter state does not match.'}
             return render(request, 'saas/error.html', context={'error': error}, status=400)
 
-        result = self.authorize(request, token, **kwargs)
-        if result and isinstance(result, HttpResponse):
-            return result
+    def _get_provider(self, **kwargs):
+        return _get_provider(kwargs['strategy'])
 
+    def get_success_response(self, request):
         next_url = self.request.session.get('next_url')
         if next_url:
             url_is_safe = url_has_allowed_host_and_scheme(
@@ -58,6 +53,19 @@ class AuthorizedView(View):
             if url_is_safe:
                 return HttpResponseRedirect(next_url)
         return HttpResponseRedirect(self.redirect_url)
+
+    def perform_authorize(self, request, **kwargs):
+        provider = self._get_provider(**kwargs)
+        token = provider.fetch_token(request)
+        user = authenticate(request, strategy=kwargs['strategy'], token=token)
+        login(request, user)
+        after_login_user.send(
+            self.__class__,
+            user=user,
+            request=self.request,
+            strategy=self.kwargs['strategy'],
+        )
+        return self.get_success_response(request)
 
 
 def _get_provider(strategy: str):

@@ -60,6 +60,8 @@ class OAuth2Provider(metaclass=ABCMeta):
     token_endpoint: str
     userinfo_endpoint: str
     scope: str
+    response_type: str = 'code'
+    response_mode: t.Literal['query', 'form_post'] = 'query'
 
     # jwks
     jwks_uri: t.ClassVar[str]
@@ -91,17 +93,19 @@ class OAuth2Provider(metaclass=ABCMeta):
             scope = self.scope
 
         state = uuid.uuid4().hex
+        absolute_uri = request.build_absolute_uri(redirect_uri)
         params = [
-            ('response_type', 'code'),
+            ('response_type', self.response_type),
             ('client_id', client_id),
-            ('redirect_uri', request.build_absolute_uri(redirect_uri)),
+            ('redirect_uri', absolute_uri),
             ('scope', scope),
             ('state', state),
         ]
-        client_secret = self.get_client_secret()
+        if self.response_mode == 'form_post':
+            params.append(('response_mode', 'form_post'))
         cache.set(
             CACHE_PREFIX + state,
-            {'client_secret': client_secret, **dict(params)},
+            {'client_id': client_id, 'redirect_uri': absolute_uri},
             timeout=self.STATE_EXPIRES_IN,
         )
         request.session[f'_state:{state}'] = '1'
@@ -123,15 +127,20 @@ class OAuth2Provider(metaclass=ABCMeta):
     def get(self, url: str, token: OAuth2Token, params=None, headers=None):
         return self.request('GET', url, token, params=params, headers=headers)
 
+    def recover_cached_state(self, state: str):
+        cached_data = cache.get(CACHE_PREFIX + state)
+        if not cached_data:
+            raise MismatchStateError()
+        cache.delete(CACHE_PREFIX + state)
+        return cached_data
+
     def fetch_token(self, request) -> OAuth2Token:
         state: str = request.GET['state']
         if not request.session.get(f'_state:{state}'):
             raise MismatchStateError()
+        request.session.delete(f'_state:{state}')
 
-        cached_data = cache.get(CACHE_PREFIX + state)
-        if not cached_data:
-            raise MismatchStateError()
-
+        cached_data = self.recover_cached_state(state)
         code: str = request.GET['code']
         data = {
             'grant_type': 'authorization_code',
@@ -139,11 +148,11 @@ class OAuth2Provider(metaclass=ABCMeta):
             'redirect_uri': cached_data['redirect_uri'],
         }
         if self.token_endpoint_auth_method == 'client_secret_basic':
-            auth = (cached_data['client_id'], cached_data['client_secret'])
+            auth = (cached_data['client_id'], self.get_client_secret())
         else:
             auth = None
             data['client_id'] = cached_data['client_id']
-            data['client_secret'] = cached_data['client_secret']
+            data['client_secret'] = self.get_client_secret()
 
         resp = requests.post(
             self.token_endpoint,
@@ -153,7 +162,6 @@ class OAuth2Provider(metaclass=ABCMeta):
             headers=self.token_endpoint_headers,
         )
         resp.raise_for_status()
-        request.session.delete(f'_state:{state}')
         return resp.json()
 
     def extract_id_token(self, id_token: str) -> jwt.Token:

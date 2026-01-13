@@ -8,6 +8,7 @@ OAuth2Token = t.TypedDict(
         'refresh_token': str,
         'expires_in': int,
         'id_token': str,
+        '_external': t.Any,
     },
     total=False,
 )

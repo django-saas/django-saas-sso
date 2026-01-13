@@ -4,7 +4,6 @@ from django.shortcuts import render
 
 from .auth import LoginView, AuthorizedView
 from ..models import UserIdentity
-from ..settings import sso_settings
 
 
 class ConnectRedirectView(LoginRequiredMixin, LoginView):
@@ -12,11 +11,12 @@ class ConnectRedirectView(LoginRequiredMixin, LoginView):
 
 
 class ConnectAuthorizedView(LoginRequiredMixin, AuthorizedView):
-    def authorize(self, request, token, **kwargs):
-        strategy = kwargs['strategy']
-        provider = sso_settings.get_sso_provider(strategy)
+    def perform_authorize(self, request, **kwargs):
+        provider = self._get_provider(**kwargs)
+        token = provider.fetch_token(request)
         userinfo = provider.fetch_userinfo(token)
         try:
+            strategy = kwargs['strategy']
             UserIdentity.objects.update_or_create(
                 user=request.user,
                 strategy=strategy,
@@ -25,6 +25,7 @@ class ConnectAuthorizedView(LoginRequiredMixin, AuthorizedView):
                     'profile': userinfo,
                 },
             )
+            return self.get_success_response(request)
         except IntegrityError:
             error = {
                 'title': 'Connection Error',

@@ -11,7 +11,10 @@ class FixturesTestCase(SaasTestCase):
     def load_fixture(name: str):
         filename = os.path.join(ROOT, 'fixtures', name)
         with open(filename) as f:
-            data = json.load(f)
+            if filename.endswith('.json'):
+                data = json.load(f)
+            else:
+                data = f.read()
         return data
 
     @classmethod

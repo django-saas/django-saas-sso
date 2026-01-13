@@ -1,6 +1,7 @@
 import uuid
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
+from django.db import transaction
 from django.db.utils import IntegrityError
 from saas_base.models import UserEmail
 from saas_base.signals import after_signup_user
@@ -51,19 +52,23 @@ class UserIdentityBackend(ModelBackend):
 
     def create_user_identity(self, request, strategy: str, userinfo: UserInfo):
         username = userinfo.get('preferred_username')
+        if not username:
+            username = uuid.uuid4().hex
+
         try:
-            user = UserModel.objects.create_user(
-                username,
-                userinfo['email'],
-                first_name=userinfo.get('given_name'),
-                last_name=userinfo.get('family_name'),
-            )
+            with transaction.atomic():
+                user = UserModel.objects.create_user(
+                    username,
+                    userinfo['email'],
+                    first_name=userinfo.get('given_name') or '',
+                    last_name=userinfo.get('family_name') or '',
+                )
         except IntegrityError:
             user = UserModel.objects.create_user(
                 uuid.uuid4().hex,
                 userinfo['email'],
-                first_name=userinfo.get('given_name'),
-                last_name=userinfo.get('family_name'),
+                first_name=userinfo.get('given_name') or '',
+                last_name=userinfo.get('family_name') or '',
             )
 
         UserIdentity.objects.create(

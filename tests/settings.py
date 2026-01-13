@@ -76,6 +76,15 @@ SAAS_SSO = {
                 'client_secret': 'github_client_secret',
             },
         },
+        {
+            'backend': 'saas_sso.backends.AppleProvider',
+            'options': {
+                'client_id': 'apple_client_id',
+                'team_id': 'apple_team_id',
+                'key_id': 'apple_key_id',
+                'private_key_path': 'tests/fixtures/apple_private_key.p8',
+            },
+        },
     ]
 }
 USE_TZ = True

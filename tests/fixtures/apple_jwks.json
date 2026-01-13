@@ -1,0 +1,5 @@
+{
+  "method": "GET",
+  "url": "https://appleid.apple.com/auth/keys",
+  "json": {"keys": [{"crv": "P-256", "x": "7jcu6KX777_qfcrLtzDECRRITdIsa0NiFOTG1IjgEa8", "y": "bG9qZMSePZjNFUaB6VuyhJSR7eBGbWF9VB6d9lHK5ks", "kty": "EC", "kid": "test-key-id"}]}
+}

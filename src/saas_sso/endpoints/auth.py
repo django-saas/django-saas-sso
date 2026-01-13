@@ -1,5 +1,5 @@
 from django.views.generic import RedirectView, View
-from django.http.response import Http404, HttpResponse, HttpResponseRedirect
+from django.http.response import Http404, HttpResponseRedirect
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.shortcuts import render
 from django.urls import reverse

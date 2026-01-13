@@ -1,4 +1,3 @@
-import requests
 from joserfc.jwt import JWTClaimsRegistry
 from ._oauth2 import OAuth2Provider
 from .types import OAuth2Token

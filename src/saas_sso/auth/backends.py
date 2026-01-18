@@ -31,18 +31,16 @@ class UserIdentityBackend(ModelBackend):
             pass
 
         if userinfo['email_verified'] and sso_settings.TRUST_EMAIL_VERIFIED:
-            return self.connect_or_create_user(request, strategy, userinfo)
+            user = self._find_related_user(request, strategy, userinfo)
+            if user:
+                return user
 
         if sso_settings.AUTO_CREATE_USER:
-            return self.create_user_identity(request, strategy, userinfo)
+            return self._create_user(request, strategy, userinfo)
 
-        # save userinfo for later
-        user_key = f'{strategy}:{userinfo["sub"]}'
-        cache_key = f'sso_userinfo_{user_key}'
-        request.session['sso_userinfo'] = user_key
-        cache.set(cache_key, userinfo, 600)
+        self._save_userinfo(request, strategy, userinfo)
 
-    def connect_or_create_user(self, request, strategy: str, userinfo: UserInfo):
+    def _find_related_user(self, request, strategy: str, userinfo: UserInfo):
         try:
             user_email = UserEmail.objects.get_by_email(userinfo['email'])
             UserIdentity.objects.create(
@@ -53,9 +51,16 @@ class UserIdentityBackend(ModelBackend):
             )
             return user_email.user
         except UserEmail.DoesNotExist:
-            return self.create_user_identity(request, strategy, userinfo)
+            return None
 
-    def create_user_identity(self, request, strategy: str, userinfo: UserInfo):
+    def _save_userinfo(self, request, strategy: str, userinfo: UserInfo):
+        # save userinfo for later
+        user_key = f'{strategy}:{userinfo["sub"]}'
+        cache_key = f'sso_userinfo_{user_key}'
+        request.session['sso_userinfo'] = user_key
+        cache.set(cache_key, userinfo, 600)
+
+    def _create_user(self, request, strategy: str, userinfo: UserInfo):
         username = userinfo.get('preferred_username')
         if not username:
             username = uuid.uuid4().hex

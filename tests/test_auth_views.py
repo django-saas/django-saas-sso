@@ -242,6 +242,12 @@ class TestOAuthLogin(FixturesTestCase):
         self.run_github_flow()
         self.assertTrue(UserIdentity.objects.filter(strategy='github').exists())
 
+    @override_settings(SAAS_SSO={**DEFAULT_SAAS_SSO, 'TRUST_EMAIL_VERIFIED': True})
+    def test_github_no_related_user(self):
+        self.assertFalse(UserIdentity.objects.filter(strategy='github').exists())
+        self.run_github_flow()
+        self.assertFalse(UserIdentity.objects.filter(strategy='github').exists())
+
     @override_settings(SAAS_SSO={**DEFAULT_SAAS_SSO, 'AUTO_CREATE_USER': True})
     def test_github_auto_create_user(self):
         self.assertFalse(UserEmail.objects.filter(email='octocat@github.com').exists())

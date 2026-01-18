@@ -101,6 +101,7 @@ class TestOAuthLogin(FixturesTestCase):
         ):
             resp = self.client.get(f'/m/auth/github/?state={state}&code=123')
             self.assertEqual(resp.status_code, 302)
+            return resp
 
     def test_google_not_create_user(self):
         state = self.resolve_state('/m/login/google/')
@@ -233,6 +234,14 @@ class TestOAuthLogin(FixturesTestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(UserEmail.objects.filter(email='octocat@github.com').exists())
 
+    @override_settings(SAAS_SSO={**DEFAULT_SAAS_SSO, 'TRUST_EMAIL_VERIFIED': True})
+    def test_github_auto_connect_user(self):
+        self.assertFalse(UserIdentity.objects.filter(strategy='github').exists())
+        user = UserModel.objects.create_user('username', 'demo@example.com')
+        UserEmail.objects.create(user=user, email='octocat@github.com')
+        self.run_github_flow()
+        self.assertTrue(UserIdentity.objects.filter(strategy='github').exists())
+
     @override_settings(SAAS_SSO={**DEFAULT_SAAS_SSO, 'AUTO_CREATE_USER': True})
     def test_github_auto_create_user(self):
         self.assertFalse(UserEmail.objects.filter(email='octocat@github.com').exists())
@@ -282,8 +291,16 @@ class TestOAuthLogin(FixturesTestCase):
             # Should pick first email
             self.assertEqual(identity.profile['email'], 'secondary@example.com')
 
+    @override_settings(SAAS_SSO={**DEFAULT_SAAS_SSO, 'AUTO_CREATE_USER': True})
     def test_login_view_next_url(self):
         resp = self.client.get('/m/login/github/?next=/dashboard')
         self.assertEqual(resp.status_code, 302)
-        # Verify session has next_url
         self.assertEqual(self.client.session.get('next_url'), '/dashboard')
+        resp = self.run_github_flow()
+        self.assertEqual(resp.headers['Location'], '/dashboard')
+
+    @override_settings(SAAS_SSO={**DEFAULT_SAAS_SSO, 'AUTO_CREATE_USER': True, 'AUTHORIZED_REDIRECT_URL': '/test'})
+    def test_authorized_redirect_url_settings(self):
+        self.client.get('/m/login/github/')
+        resp = self.run_github_flow()
+        self.assertEqual(resp.headers['Location'], '/test')

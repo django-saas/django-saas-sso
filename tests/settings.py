@@ -61,7 +61,9 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
 }
 SAAS_SSO = {
+    'TRUST_EMAIL_VERIFIED': False,
     'AUTO_CREATE_USER': False,
+    'AUTHORIZED_REDIRECT_URL': '',
     'PROVIDERS': [
         {
             'backend': 'saas_sso.backends.GoogleProvider',

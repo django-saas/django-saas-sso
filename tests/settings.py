@@ -61,6 +61,7 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
 }
 SAAS_SSO = {
+    'AUTO_CREATE_USER': False,
     'PROVIDERS': [
         {
             'backend': 'saas_sso.backends.GoogleProvider',
@@ -85,7 +86,7 @@ SAAS_SSO = {
                 'private_key_path': 'tests/fixtures/apple_private_key.p8',
             },
         },
-    ]
+    ],
 }
 USE_TZ = True
 TIME_ZONE = 'UTC'

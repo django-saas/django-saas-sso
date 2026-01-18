@@ -1,17 +1,14 @@
 import uuid
-from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
-from django.db import transaction
-from django.db.utils import IntegrityError
+from django.core.cache import cache
 from saas_base.models import UserEmail
 from saas_base.signals import after_signup_user
 from saas_sso.models import UserIdentity
 from saas_sso.settings import sso_settings
 from saas_sso.types import UserInfo
+from .create_user import create_user_with_userinfo
 
 __all__ = ['UserIdentityBackend']
-
-UserModel = get_user_model()
 
 
 class UserIdentityBackend(ModelBackend):
@@ -35,7 +32,15 @@ class UserIdentityBackend(ModelBackend):
 
         if userinfo['email_verified'] and sso_settings.TRUST_EMAIL_VERIFIED:
             return self.connect_or_create_user(request, strategy, userinfo)
-        return self.create_user_identity(request, strategy, userinfo)
+
+        if sso_settings.AUTO_CREATE_USER:
+            return self.create_user_identity(request, strategy, userinfo)
+
+        # save userinfo for later
+        user_key = f'{strategy}:{userinfo["sub"]}'
+        cache_key = f'sso_userinfo_{user_key}'
+        request.session['sso_userinfo'] = user_key
+        cache.set(cache_key, userinfo, 600)
 
     def connect_or_create_user(self, request, strategy: str, userinfo: UserInfo):
         try:
@@ -55,38 +60,7 @@ class UserIdentityBackend(ModelBackend):
         if not username:
             username = uuid.uuid4().hex
 
-        try:
-            with transaction.atomic():
-                user = UserModel.objects.create_user(
-                    username,
-                    userinfo['email'],
-                    first_name=userinfo.get('given_name') or '',
-                    last_name=userinfo.get('family_name') or '',
-                )
-        except IntegrityError:
-            user = UserModel.objects.create_user(
-                uuid.uuid4().hex,
-                userinfo['email'],
-                first_name=userinfo.get('given_name') or '',
-                last_name=userinfo.get('family_name') or '',
-            )
-
-        UserIdentity.objects.create(
-            strategy=strategy,
-            user=user,
-            subject=userinfo['sub'],
-            profile=userinfo,
-        )
-
-        # auto add user email
-        if userinfo['email_verified']:
-            UserEmail.objects.create(
-                user_id=user.pk,
-                email=userinfo['email'],
-                verified=True,
-                primary=True,
-            )
-
+        user = create_user_with_userinfo(username, strategy, userinfo)
         after_signup_user.send(
             self.__class__,
             user=user,

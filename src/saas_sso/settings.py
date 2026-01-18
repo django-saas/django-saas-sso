@@ -6,6 +6,8 @@ class SSOSettings(BaseSettings):
     SETTINGS_KEY: str = 'SAAS_SSO'
     DEFAULT_SETTINGS = {
         'TRUST_EMAIL_VERIFIED': False,
+        'AUTO_CREATE_USER': False,
+        'AUTHORIZED_REDIRECT_URL': '',
         'PROVIDERS': [],
     }
     IMPORT_SETTINGS = [

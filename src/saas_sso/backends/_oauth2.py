@@ -9,6 +9,7 @@ from joserfc import jwt
 from joserfc.jwk import KeySet
 from joserfc.util import to_bytes, to_str
 from django.core.cache import cache
+from saas_base.secure import resolve_secret
 from .types import OAuth2Token, Placement, UserInfo
 
 __all__ = ['OAuth2Provider', 'OAuth2Auth', 'MismatchStateError']
@@ -71,10 +72,10 @@ class OAuth2Provider(metaclass=ABCMeta):
         self.options = options
 
     def get_client_id(self) -> str:
-        return self.options['client_id']
+        return resolve_secret(self.options['client_id'])
 
     def get_client_secret(self) -> str:
-        return self.options['client_secret']
+        return resolve_secret(self.options['client_secret'])
 
     @classmethod
     def fetch_key_set(cls, force: bool = False) -> KeySet:

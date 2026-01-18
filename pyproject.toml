@@ -42,6 +42,7 @@ build-backend = "hatchling.build"
 dev = [
     "drf_spectacular",
     "pytest",
+    "pytest-env",
     "pytest-django",
     "pytest-cov",
     "requests-mock",
@@ -74,7 +75,9 @@ addopts = "--no-migrations"
 pythonpath = ["src"]
 testpaths = ["tests"]
 filterwarnings = ["error"]
-DJANGO_SETTINGS_MODULE = "tests.settings"
+env = [
+    "DJANGO_SETTINGS_MODULE = tests.settings",
+]
 
 [tool.coverage.paths]
 source = ["src"]

@@ -24,8 +24,6 @@ class LoginView(RedirectView):
 
 
 class AuthorizedView(View):
-    redirect_url = settings.LOGIN_REDIRECT_URL
-
     def get(self, request, *args, **kwargs):
         return self._perform_request(request, **kwargs)
 
@@ -42,6 +40,11 @@ class AuthorizedView(View):
     def _get_provider(self, **kwargs):
         return _get_provider(kwargs['strategy'])
 
+    def get_redirect_url(self):
+        if sso_settings.AUTHORIZED_REDIRECT_URL:
+            return sso_settings.AUTHORIZED_REDIRECT_URL
+        return settings.LOGIN_REDIRECT_URL
+
     def get_success_response(self, request):
         next_url = self.request.session.get('next_url')
         if next_url:
@@ -52,19 +55,20 @@ class AuthorizedView(View):
             )
             if url_is_safe:
                 return HttpResponseRedirect(next_url)
-        return HttpResponseRedirect(self.redirect_url)
+        return HttpResponseRedirect(self.get_redirect_url())
 
     def perform_authorize(self, request, **kwargs):
         provider = self._get_provider(**kwargs)
         token = provider.fetch_token(request)
         user = authenticate(request, strategy=kwargs['strategy'], token=token)
-        login(request, user)
-        after_login_user.send(
-            self.__class__,
-            user=user,
-            request=self.request,
-            strategy=self.kwargs['strategy'],
-        )
+        if user:
+            login(request, user)
+            after_login_user.send(
+                self.__class__,
+                user=user,
+                request=self.request,
+                strategy=self.kwargs['strategy'],
+            )
         return self.get_success_response(request)
 
 

@@ -13,6 +13,7 @@ from saas_base.models import UserEmail
 from saas_sso.models import UserIdentity
 
 UserModel = get_user_model()
+DEFAULT_SAAS_SSO = settings.SAAS_SSO.copy()
 
 
 class TestOAuthLogin(FixturesTestCase):
@@ -101,14 +102,7 @@ class TestOAuthLogin(FixturesTestCase):
             resp = self.client.get(f'/m/auth/github/?state={state}&code=123')
             self.assertEqual(resp.status_code, 302)
 
-    def test_github_login(self):
-        self.assertEqual(UserEmail.objects.filter(email='octocat@github.com').count(), 0)
-        self.run_github_flow()
-        self.assertEqual(UserEmail.objects.filter(email='octocat@github.com').count(), 1)
-        # the next flow will auto login
-        self.run_github_flow()
-
-    def test_google_flow(self):
+    def test_google_not_create_user(self):
         state = self.resolve_state('/m/login/google/')
 
         with self.mock_requests(
@@ -117,12 +111,14 @@ class TestOAuthLogin(FixturesTestCase):
         ):
             resp = self.client.get(f'/m/auth/google/?state={state}&code=123')
             self.assertEqual(resp.status_code, 302)
+            count = UserIdentity.objects.filter(strategy='google').count()
+            self.assertEqual(count, 0)
 
-    def test_google_flow_with_id_token(self):
+    @override_settings(SAAS_SSO={**DEFAULT_SAAS_SSO, 'AUTO_CREATE_USER': True})
+    def test_google_id_token_create_user(self):
         state = self.resolve_state('/m/login/google/')
 
-        with self.mock_requests('apple_jwks.json') as m:
-            # mock Google JWKS with Apple's (since we used Apple's key to sign)
+        with Mocker() as m:
             m.register_uri(
                 'GET', 'https://www.googleapis.com/oauth2/v3/certs', json=self.load_fixture('apple_jwks.json')['json']
             )
@@ -134,6 +130,7 @@ class TestOAuthLogin(FixturesTestCase):
             identity = UserIdentity.objects.get(strategy='google', subject='google-user-sub')
             self.assertEqual(identity.profile['email'], 'google-id-token@example.com')
 
+    @override_settings(SAAS_SSO={**DEFAULT_SAAS_SSO, 'AUTO_CREATE_USER': True})
     def test_google_flow_with_preferred_username(self):
         state = self.resolve_state('/m/login/google/')
 
@@ -143,6 +140,7 @@ class TestOAuthLogin(FixturesTestCase):
             identity = UserIdentity.objects.get(strategy='google', subject='google-pref')
             self.assertEqual(identity.user.username, 'google_user')
 
+    @override_settings(SAAS_SSO={**DEFAULT_SAAS_SSO, 'AUTO_CREATE_USER': True})
     def test_google_flow_email_not_verified(self):
         state = self.resolve_state('/m/login/google/')
 
@@ -154,6 +152,7 @@ class TestOAuthLogin(FixturesTestCase):
             identity = UserIdentity.objects.get(strategy='google', subject='google-unverified')
             self.assertFalse(UserEmail.objects.filter(user=identity.user, email='unverified@example.com').exists())
 
+    @override_settings(SAAS_SSO={**DEFAULT_SAAS_SSO, 'AUTO_CREATE_USER': True})
     def test_apple_flow(self):
         state = self.resolve_state('/m/login/apple/')
 
@@ -172,6 +171,7 @@ class TestOAuthLogin(FixturesTestCase):
             # Verify email creation
             self.assertTrue(UserEmail.objects.filter(email='apple@example.com').exists())
 
+    @override_settings(SAAS_SSO={**DEFAULT_SAAS_SSO, 'AUTO_CREATE_USER': True})
     def test_apple_flow_with_user_name(self):
         state = self.resolve_state('/m/login/apple/')
         user_json = '{"name": {"firstName": "Apple", "lastName": "User"}}'
@@ -190,6 +190,7 @@ class TestOAuthLogin(FixturesTestCase):
             self.assertEqual(identity.profile['given_name'], 'Apple')
             self.assertEqual(identity.profile['family_name'], 'User')
 
+    @override_settings(SAAS_SSO={**DEFAULT_SAAS_SSO, 'AUTO_CREATE_USER': True})
     def test_apple_flow_code_exchange(self):
         state = self.resolve_state('/m/login/apple/')
         id_token = self.generate_apple_id_token()
@@ -213,29 +214,34 @@ class TestOAuthLogin(FixturesTestCase):
             self.assertEqual(resp.status_code, 302)
             self.assertTrue(UserIdentity.objects.filter(strategy='apple', subject='apple-user-sub').exists())
 
-    def test_auto_link_by_email(self):
-        # Create existing user with email
-        user = UserModel.objects.create_user(username='existing_user', email='auto-link@example.com')
-        UserEmail.objects.create(user=user, email='auto-link@example.com', verified=True, primary=True)
+    def test_fetch_no_userinfo(self):
+        resp = self.client.get('/m/session/userinfo/')
+        self.assertEqual(resp.status_code, 404)
 
-        state = self.resolve_state('/m/login/google/')
+    def test_github_not_auto_create_user(self):
+        self.assertFalse(UserEmail.objects.filter(email='octocat@github.com').exists())
+        self.run_github_flow()
+        self.assertFalse(UserEmail.objects.filter(email='octocat@github.com').exists())
 
-        new_saas_sso = settings.SAAS_SSO.copy()
-        new_saas_sso['TRUST_EMAIL_VERIFIED'] = True
+        # we can fetch userinfo from session
+        resp = self.client.get('/m/session/userinfo/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['preferred_username'], 'octocat')
 
-        # Google returns same email, verified
-        with override_settings(SAAS_SSO=new_saas_sso):
-            with self.mock_requests('google_token.json', 'google_user_autolink.json'):
-                resp = self.client.get(f'/m/auth/google/?state={state}&code=123')
-                self.assertEqual(resp.status_code, 302)
+        # then we can create user
+        resp = self.client.post('/m/session/create-user/', data={'username': 'octocat'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(UserEmail.objects.filter(email='octocat@github.com').exists())
 
-                # Verify identity created for EXISTING user
-                self.assertTrue(
-                    UserIdentity.objects.filter(user=user, strategy='google', subject='google-sub-123').exists()
-                )
-                identity = UserIdentity.objects.get(strategy='google', subject='google-sub-123')
-                self.assertEqual(identity.user_id, user.id)
+    @override_settings(SAAS_SSO={**DEFAULT_SAAS_SSO, 'AUTO_CREATE_USER': True})
+    def test_github_auto_create_user(self):
+        self.assertFalse(UserEmail.objects.filter(email='octocat@github.com').exists())
+        self.run_github_flow()
+        self.assertTrue(UserEmail.objects.filter(email='octocat@github.com').exists())
+        # the next flow will auto login
+        self.run_github_flow()
 
+    @override_settings(SAAS_SSO={**DEFAULT_SAAS_SSO, 'AUTO_CREATE_USER': True})
     def test_duplicate_username_fallback(self):
         # Create user with username 'collision'
         UserModel.objects.create_user(username='collision', email='original@example.com')
@@ -252,6 +258,7 @@ class TestOAuthLogin(FixturesTestCase):
             self.assertNotEqual(identity.user.username, 'collision')
             self.assertEqual(identity.user.email, 'new@example.com')
 
+    @override_settings(SAAS_SSO={**DEFAULT_SAAS_SSO, 'AUTO_CREATE_USER': True})
     def test_github_name_parsing_single(self):
         state = self.resolve_state('/m/login/github/')
 
@@ -263,6 +270,7 @@ class TestOAuthLogin(FixturesTestCase):
             self.assertEqual(identity.profile['given_name'], 'SingleName')
             self.assertIsNone(identity.profile['family_name'])
 
+    @override_settings(SAAS_SSO={**DEFAULT_SAAS_SSO, 'AUTO_CREATE_USER': True})
     def test_github_no_primary_email(self):
         state = self.resolve_state('/m/login/github/')
 

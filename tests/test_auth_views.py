@@ -310,3 +310,12 @@ class TestOAuthLogin(FixturesTestCase):
         self.client.get('/m/login/github/')
         resp = self.run_github_flow()
         self.assertEqual(resp.headers['Location'], '/test')
+
+    @override_settings(SAAS_SSO={**DEFAULT_SAAS_SSO, 'AUTHORIZATION_REDIRECT_URL': 'http://test/{strategy}'})
+    def test_authorization_redirect_url_settings(self):
+        resp = self.client.get('/m/login/github/')
+        self.assertEqual(resp.status_code, 302)
+        location = resp.get('Location')
+        params = parse_qs(urlparse(location).query)
+        redirect_uri = params['redirect_uri'][0]
+        self.assertEqual(redirect_uri, 'http://test/github')

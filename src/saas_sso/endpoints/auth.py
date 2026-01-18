@@ -13,13 +13,18 @@ from ..settings import sso_settings
 class LoginView(RedirectView):
     redirect_url_name = 'saas_sso:auth'
 
+    def get_authorization_redirect_url(self, **kwargs):
+        if sso_settings.AUTHORIZATION_REDIRECT_URL:
+            return sso_settings.AUTHORIZATION_REDIRECT_URL.format(**kwargs)
+        return reverse(self.redirect_url_name, kwargs=kwargs)
+
     def get_redirect_url(self, *args, **kwargs):
         next_url = self.request.GET.get('next')
         if next_url:
             self.request.session['next_url'] = next_url
 
         provider = _get_provider(kwargs['strategy'])
-        redirect_uri = reverse(self.redirect_url_name, kwargs=kwargs)
+        redirect_uri = self.get_authorization_redirect_url(**kwargs)
         return provider.create_authorization_url(self.request, redirect_uri)
 
 

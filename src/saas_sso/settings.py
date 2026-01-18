@@ -7,6 +7,8 @@ class SSOSettings(BaseSettings):
     DEFAULT_SETTINGS = {
         'TRUST_EMAIL_VERIFIED': False,
         'AUTO_CREATE_USER': False,
+        # AUTHORIZATION_REDIRECT_URL = 'https://example.com/authorized/{strategy}'
+        'AUTHORIZATION_REDIRECT_URL': '',
         'AUTHORIZED_REDIRECT_URL': '',
         'PROVIDERS': [],
     }

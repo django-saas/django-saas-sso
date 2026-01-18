@@ -14,8 +14,8 @@ class LoginView(RedirectView):
     redirect_url_name = 'saas_sso:auth'
 
     def get_authorization_redirect_url(self, **kwargs):
-        if sso_settings.AUTHORIZATION_REDIRECT_URL:
-            return sso_settings.AUTHORIZATION_REDIRECT_URL.format(**kwargs)
+        if sso_settings.AUTHORIZED_URL:
+            return sso_settings.AUTHORIZED_URL.format(**kwargs)
         return reverse(self.redirect_url_name, kwargs=kwargs)
 
     def get_redirect_url(self, *args, **kwargs):

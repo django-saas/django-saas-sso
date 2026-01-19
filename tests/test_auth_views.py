@@ -216,7 +216,7 @@ class TestOAuthLogin(FixturesTestCase):
             self.assertTrue(UserIdentity.objects.filter(strategy='apple', subject='apple-user-sub').exists())
 
     def test_fetch_no_userinfo(self):
-        resp = self.client.get('/m/session/userinfo/')
+        resp = self.client.get('/m/sso/userinfo/')
         self.assertEqual(resp.status_code, 404)
 
     def test_github_not_auto_create_user(self):
@@ -225,12 +225,12 @@ class TestOAuthLogin(FixturesTestCase):
         self.assertFalse(UserEmail.objects.filter(email='octocat@github.com').exists())
 
         # we can fetch userinfo from session
-        resp = self.client.get('/m/session/userinfo/')
+        resp = self.client.get('/m/sso/userinfo/')
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()['preferred_username'], 'octocat')
 
         # then we can create user
-        resp = self.client.post('/m/session/create-user/', data={'username': 'octocat'})
+        resp = self.client.post('/m/sso/create-user/', data={'username': 'octocat'})
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(UserEmail.objects.filter(email='octocat@github.com').exists())
 

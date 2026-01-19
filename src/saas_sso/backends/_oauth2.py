@@ -72,10 +72,12 @@ class OAuth2Provider(metaclass=ABCMeta):
         self.options = options
 
     def get_client_id(self) -> str:
-        return resolve_secret(self.options['client_id'])
+        client_id = self.options.get('client_id', f'secret:{self.strategy}_client_id')
+        return resolve_secret(client_id)
 
     def get_client_secret(self) -> str:
-        return resolve_secret(self.options['client_secret'])
+        client_secret = self.options.get('client_secret', f'secret:{self.strategy}_client_secret')
+        return resolve_secret(client_secret)
 
     @classmethod
     def fetch_key_set(cls, force: bool = False) -> KeySet:

@@ -45,12 +45,12 @@ class AuthorizedView(View):
     def _get_provider(self, **kwargs):
         return _get_provider(kwargs['strategy'])
 
-    def get_redirect_url(self):
+    def get_redirect_url(self, **kwargs):
         if sso_settings.AUTHORIZED_REDIRECT_URL:
-            return sso_settings.AUTHORIZED_REDIRECT_URL
+            return sso_settings.AUTHORIZED_REDIRECT_URL.format(**kwargs)
         return settings.LOGIN_REDIRECT_URL
 
-    def get_success_response(self, request):
+    def get_success_response(self, **kwargs):
         next_url = self.request.session.get('next_url')
         if next_url:
             url_is_safe = url_has_allowed_host_and_scheme(
@@ -60,7 +60,7 @@ class AuthorizedView(View):
             )
             if url_is_safe:
                 return HttpResponseRedirect(next_url)
-        return HttpResponseRedirect(self.get_redirect_url())
+        return HttpResponseRedirect(self.get_redirect_url(**kwargs))
 
     def perform_authorize(self, request, **kwargs):
         provider = self._get_provider(**kwargs)
@@ -74,7 +74,7 @@ class AuthorizedView(View):
                 request=self.request,
                 strategy=self.kwargs['strategy'],
             )
-        return self.get_success_response(request)
+        return self.get_success_response(**kwargs)
 
 
 def _get_provider(strategy: str):

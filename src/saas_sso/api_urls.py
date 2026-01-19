@@ -11,6 +11,6 @@ from .endpoints.session import (
 urlpatterns = [
     path('session/userinfo/', SessionUserInfoEndpoint.as_view()),
     path('session/create-user/', SessionCreateUserEndpoint.as_view()),
-    path('identities/', UserIdentityListEndpoint.as_view()),
-    path('identities/<pk>/', UserIdentityItemEndpoint.as_view()),
+    path('user/identities/', UserIdentityListEndpoint.as_view()),
+    path('user/identities/<pk>/', UserIdentityItemEndpoint.as_view()),
 ]

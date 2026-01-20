@@ -25,7 +25,7 @@ class ConnectAuthorizedView(LoginRequiredMixin, AuthorizedView):
                     'profile': userinfo,
                 },
             )
-            return self.get_success_response(request)
+            return self.get_success_response(**kwargs)
         except IntegrityError:
             error = {
                 'title': 'Connection Error',

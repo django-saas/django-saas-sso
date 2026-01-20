@@ -1,7 +1,7 @@
 import uuid
 from django.contrib.auth.backends import ModelBackend
 from django.core.cache import cache
-from saas_base.models import UserEmail
+from saas_base.identity.models import UserEmail
 from saas_base.signals import after_signup_user
 from saas_sso.models import UserIdentity
 from saas_sso.settings import sso_settings

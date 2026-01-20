@@ -10,7 +10,7 @@ dependencies = [
     "djangorestframework",
     "requests",
     "joserfc",
-    "django-saas-base>=0.14.0",
+    "django-saas-base>=0.15.0",
 ]
 readme = "README.md"
 requires-python = ">= 3.12"

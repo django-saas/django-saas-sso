@@ -2,7 +2,7 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.utils import IntegrityError
-from saas_base.models import UserEmail
+from saas_base.identity.models import UserEmail
 from saas_sso.models import UserIdentity
 from saas_sso.types import UserInfo
 

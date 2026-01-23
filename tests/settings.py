@@ -51,6 +51,8 @@ INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.sessions',
     'saas_base',
+    'saas_base.identity',
+    'saas_base.tenancy',
     'saas_sso',
 ]
 REST_FRAMEWORK = {

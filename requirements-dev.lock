@@ -11,7 +11,7 @@ coverage==7.13.1
 cryptography==46.0.3
 css-inline==0.19.0
 django==6.0.1
-django-saas-base==0.15.0
+django-saas-base==1.0.0a1
 djangorestframework==3.16.1
 drf-spectacular==0.29.0
 idna==3.11
@@ -20,9 +20,9 @@ iniconfig==2.3.0
 joserfc==1.6.1
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
-packaging==25.0
+packaging==26.0
 pluggy==1.6.0
-pycparser==2.23 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
+pycparser==3.0 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
 pygments==2.19.2
 pytest==9.0.2
 pytest-cov==7.0.0

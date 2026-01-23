@@ -63,6 +63,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_spectacular',
     'saas_base',
+    'saas_base.identity',
+    'saas_base.tenancy',
     'saas_base.drf',
     'saas_sso',
 ]

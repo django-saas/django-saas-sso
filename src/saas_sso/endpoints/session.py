@@ -12,6 +12,8 @@ from saas_sso.settings import sso_settings
 
 
 class BaseSessionEndpoint(Endpoint):
+    permission_classes = []
+
     def parse_cached_userinfo(self, request: Request):
         user_key = request.session.get('sso_userinfo')
         if not user_key:

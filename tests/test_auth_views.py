@@ -9,7 +9,7 @@ from django.conf import settings
 from django.test import override_settings
 
 from tests.client import FixturesTestCase
-from saas_base.models import UserEmail
+from saas_base.identity.models import UserEmail
 from saas_sso.models import UserIdentity
 
 UserModel = get_user_model()

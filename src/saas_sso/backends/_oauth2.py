@@ -17,7 +17,7 @@ from joserfc import jwt
 from joserfc.jwk import KeySet
 from joserfc.util import to_bytes, to_str
 from django.core.cache import cache
-from saas_base.secure import resolve_secret
+from saas_base.utils.secure import resolve_secret
 from .types import OAuth2Token, Placement, UserInfo
 
 __all__ = ['OAuth2Provider', 'OAuth2Auth', 'MismatchStateError']

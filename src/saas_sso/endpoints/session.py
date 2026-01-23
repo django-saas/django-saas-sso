@@ -12,6 +12,7 @@ from saas_sso.settings import sso_settings
 
 
 class BaseSessionEndpoint(Endpoint):
+    authentication_classes = []
     permission_classes = []
 
     def parse_cached_userinfo(self, request: Request):
@@ -34,6 +35,8 @@ class SessionUserInfoEndpoint(BaseSessionEndpoint):
 
 
 class SessionCreateUserEndpoint(BaseSessionEndpoint):
+    """Create a user with a username, other userinfo is cached in the session."""
+
     serializer_class = UsernameSerializer
     redirect_url = settings.LOGIN_REDIRECT_URL
 

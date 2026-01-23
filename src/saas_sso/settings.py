@@ -1,5 +1,11 @@
+from __future__ import annotations
+
+import typing
 from django.core.signals import setting_changed
 from saas_base.settings import BaseSettings
+
+if typing.TYPE_CHECKING:
+    from .backends import OAuth2Provider
 
 
 class SSOSettings(BaseSettings):
@@ -17,7 +23,7 @@ class SSOSettings(BaseSettings):
     ]
 
     @property
-    def sso_providers(self):
+    def sso_providers(self) -> dict[str, 'OAuth2Provider']:
         return {provider.strategy: provider for provider in self.PROVIDERS}
 
     def get_sso_provider(self, strategy):

@@ -1,3 +1,5 @@
+from django.http import HttpRequest
+
 from ._oauth2 import OAuth2Provider
 from .types import OAuth2Token
 
@@ -9,8 +11,9 @@ class GitHubProvider(OAuth2Provider):
     token_endpoint = 'https://github.com/login/oauth/access_token'
     userinfo_endpoint = 'https://api.github.com/user'
     scope = 'read:user user:email'
+    code_challenge_method = 'S256'
 
-    def fetch_userinfo(self, token: OAuth2Token):
+    def fetch_userinfo(self, request: HttpRequest, token: OAuth2Token):
         resp = self.get(self.userinfo_endpoint, token=token)
         resp.raise_for_status()
         user = resp.json()

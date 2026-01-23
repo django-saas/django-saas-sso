@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import uuid
 from django.contrib.auth.backends import ModelBackend
 from django.core.cache import cache
+from django.http import HttpRequest
 from saas_base.identity.models import UserEmail
 from saas_base.signals import after_signup_user
 from saas_sso.models import UserIdentity
@@ -12,7 +15,7 @@ __all__ = ['UserIdentityBackend']
 
 
 class UserIdentityBackend(ModelBackend):
-    def authenticate(self, request, strategy=None, token=None, **kwargs):
+    def authenticate(self, request: HttpRequest, strategy: str | None = None, token: str | None = None, **kwargs):
         if strategy is None or token is None:
             return
 
@@ -20,7 +23,7 @@ class UserIdentityBackend(ModelBackend):
         if provider is None:
             return
 
-        userinfo = provider.fetch_userinfo(token)
+        userinfo = provider.fetch_userinfo(request, token)
         try:
             identity = UserIdentity.objects.select_related('user').get(
                 strategy=provider.strategy,

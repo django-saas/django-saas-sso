@@ -14,7 +14,7 @@ class ConnectAuthorizedView(LoginRequiredMixin, AuthorizedView):
     def perform_authorize(self, request, **kwargs):
         provider = self._get_provider(**kwargs)
         token = provider.fetch_token(request)
-        userinfo = provider.fetch_userinfo(token)
+        userinfo = provider.fetch_userinfo(request, token)
         try:
             strategy = kwargs['strategy']
             UserIdentity.objects.update_or_create(

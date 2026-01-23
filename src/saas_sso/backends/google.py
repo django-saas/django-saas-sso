@@ -1,4 +1,4 @@
-from joserfc.jwt import JWTClaimsRegistry
+from django.http import HttpRequest
 from ._oauth2 import OAuth2Provider
 from .types import OAuth2Token
 
@@ -6,26 +6,16 @@ from .types import OAuth2Token
 class GoogleProvider(OAuth2Provider):
     name = 'Google'
     strategy = 'google'
-    authorization_endpoint = 'https://accounts.google.com/o/oauth2/v2/auth'
-    token_endpoint = 'https://oauth2.googleapis.com/token'
-    userinfo_endpoint = 'https://openidconnect.googleapis.com/v1/userinfo'
-    jwks_uri = 'https://www.googleapis.com/oauth2/v3/certs'
+    openid_configuration_endpoint = 'https://accounts.google.com/.well-known/openid-configuration'
+    code_challenge_method = 'S256'
     scope = 'openid profile email'
 
-    def fetch_userinfo(self, token: OAuth2Token):
+    def fetch_userinfo(self, request: HttpRequest, token: OAuth2Token):
         id_token = token.pop('id_token', None)
         if id_token:
-            claims_registry = JWTClaimsRegistry(
-                leeway=100,
-                iss={'essential': True},
-                sub={'essential': True},
-                email={'essential': True},
-            )
-            _tok = self.extract_id_token(id_token)
-            claims_registry.validate(_tok.claims)
-            claims = _tok.claims
+            claims = self.extract_id_token(request, id_token)
         else:
-            resp = self.get(self.userinfo_endpoint, token=token)
+            resp = self.get(self.get_userinfo_endpoint(), token=token)
             claims = resp.json()
 
         # use email's username as preferred_username

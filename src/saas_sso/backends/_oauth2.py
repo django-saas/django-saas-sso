@@ -1,8 +1,16 @@
+from __future__ import annotations
+
 import typing as t
 import uuid
+import base64
+import hashlib
+import secrets
+
 import requests
 from abc import ABCMeta, abstractmethod
 from urllib import parse as urlparse
+
+from django.http import HttpRequest
 from requests import PreparedRequest
 from requests.auth import AuthBase
 from joserfc import jwt
@@ -57,19 +65,33 @@ class OAuth2Provider(metaclass=ABCMeta):
 
     name: str = 'OAuth'
     strategy: str
-    authorization_endpoint: str
-    token_endpoint: str
-    userinfo_endpoint: str
     scope: str
+
+    openid_configuration_endpoint: str | None = None
+    openid_configuration: t.ClassVar[dict[str, str | list[str]]] = {}
+
+    authorization_endpoint: str | None = None
+    token_endpoint: str | None = None
+    userinfo_endpoint: str | None = None
+
     response_type: str = 'code'
     response_mode: t.Literal['query', 'form_post'] = 'query'
+    code_challenge_method: t.Literal['S256'] | None = None
 
-    # jwks
-    jwks_uri: t.ClassVar[str]
     jwks: t.ClassVar[KeySet] = KeySet([])
 
     def __init__(self, **options):
         self.options = options
+
+    @classmethod
+    def get_openid_configuration(cls):
+        if cls.openid_configuration:
+            return cls.openid_configuration
+
+        resp = requests.get(cls.openid_configuration_endpoint, timeout=5)
+        resp.raise_for_status()
+        cls.openid_configuration = resp.json()
+        return cls.openid_configuration
 
     def get_client_id(self) -> str:
         client_id = self.options.get('client_id', f'secret:{self.strategy}_client_id')
@@ -79,11 +101,28 @@ class OAuth2Provider(metaclass=ABCMeta):
         client_secret = self.options.get('client_secret', f'secret:{self.strategy}_client_secret')
         return resolve_secret(client_secret)
 
+    def get_userinfo_endpoint(self) -> str:
+        if self.userinfo_endpoint:
+            return self.userinfo_endpoint
+        return self.get_openid_configuration()['userinfo_endpoint']
+
+    def get_authorization_endpoint(self) -> str:
+        if self.authorization_endpoint:
+            return self.authorization_endpoint
+        return self.get_openid_configuration()['authorization_endpoint']
+
+    def get_token_endpoint(self) -> str:
+        if self.token_endpoint:
+            return self.token_endpoint
+        return self.get_openid_configuration()['token_endpoint']
+
     @classmethod
     def fetch_key_set(cls, force: bool = False) -> KeySet:
         if cls.jwks.keys and not force:
             return cls.jwks
-        resp = requests.get(cls.jwks_uri, timeout=5)
+
+        metadata = cls.get_openid_configuration()
+        resp = requests.get(metadata['jwks_uri'], timeout=5)
         data = resp.json()
         jwks = KeySet.import_key_set(data)
         cls.jwks = jwks
@@ -97,6 +136,9 @@ class OAuth2Provider(metaclass=ABCMeta):
 
         state = uuid.uuid4().hex
         absolute_uri = request.build_absolute_uri(redirect_uri)
+
+        to_save = {'client_id': client_id, 'redirect_uri': absolute_uri}
+
         params = [
             ('response_type', self.response_type),
             ('client_id', client_id),
@@ -106,13 +148,25 @@ class OAuth2Provider(metaclass=ABCMeta):
         ]
         if self.response_mode == 'form_post':
             params.append(('response_mode', 'form_post'))
+
+        if scope and 'openid' in scope.split():
+            nonce = secrets.token_urlsafe(20)
+            params.append(('nonce', nonce))
+            to_save['nonce'] = nonce
+
+        if self.code_challenge_method:
+            params.append(('code_challenge_method', self.code_challenge_method))
+            code_verifier = secrets.token_urlsafe(48)
+            params.append(('code_challenge', create_s256_code_challenge(code_verifier)))
+            to_save['code_verifier'] = code_verifier
+
         cache.set(
             CACHE_PREFIX + state,
-            {'client_id': client_id, 'redirect_uri': absolute_uri},
+            to_save,
             timeout=self.STATE_EXPIRES_IN,
         )
         request.session[f'_state:{state}'] = '1'
-        return add_params_to_uri(self.authorization_endpoint, params)
+        return add_params_to_uri(self.get_authorization_endpoint(), params)
 
     def request(self, method: str, url: str, token: OAuth2Token, params=None, data=None, json=None, headers=None):
         auth = OAuth2Auth(token['access_token'], self.bearer_token_placement)
@@ -130,15 +184,11 @@ class OAuth2Provider(metaclass=ABCMeta):
     def get(self, url: str, token: OAuth2Token, params=None, headers=None):
         return self.request('GET', url, token, params=params, headers=headers)
 
-    def recover_cached_state(self, state: str):
-        cached_data = cache.get(CACHE_PREFIX + state)
-        if not cached_data:
-            raise MismatchStateError()
-        cache.delete(CACHE_PREFIX + state)
-        return cached_data
-
-    def fetch_token(self, request) -> OAuth2Token:
-        state = request.GET.get('state')
+    def verify_cached_state(self, request: HttpRequest):
+        if self.response_mode == 'form_post':
+            state = request.POST.get('state')
+        else:
+            state = request.GET.get('state')
         if not state:
             raise MismatchStateError()
 
@@ -146,22 +196,38 @@ class OAuth2Provider(metaclass=ABCMeta):
             raise MismatchStateError()
         request.session.delete(f'_state:{state}')
 
-        cached_data = self.recover_cached_state(state)
-        code = request.GET.get('code')
+        cached_state = cache.get(CACHE_PREFIX + state)
+        if not cached_state:
+            raise MismatchStateError()
+
+        cache.delete(CACHE_PREFIX + state)
+        setattr(request, '_cached_state', cached_state)
+        return cached_state
+
+    def _process_fetch_token(self, request: HttpRequest, cached_state: dict[str, str]):
+        if self.response_mode == 'form_post':
+            code = request.POST.get('code')
+        else:
+            code = request.GET.get('code')
         data = {
             'grant_type': 'authorization_code',
             'code': code,
-            'redirect_uri': cached_data['redirect_uri'],
+            'redirect_uri': cached_state['redirect_uri'],
         }
+
+        code_verifier = cached_state.get('code_verifier')
+        if code_verifier and self.code_challenge_method == 'S256':
+            data['code_verifier'] = code_verifier
+
         if self.token_endpoint_auth_method == 'client_secret_basic':
-            auth = (cached_data['client_id'], self.get_client_secret())
+            auth = (cached_state['client_id'], self.get_client_secret())
         else:
             auth = None
-            data['client_id'] = cached_data['client_id']
+            data['client_id'] = cached_state['client_id']
             data['client_secret'] = self.get_client_secret()
 
         resp = requests.post(
-            self.token_endpoint,
+            self.get_token_endpoint(),
             data=data,
             auth=auth,
             timeout=5,
@@ -170,16 +236,40 @@ class OAuth2Provider(metaclass=ABCMeta):
         resp.raise_for_status()
         return resp.json()
 
-    def extract_id_token(self, id_token: str) -> jwt.Token:
+    def fetch_token(self, request: HttpRequest) -> OAuth2Token:
+        cached_state = self.verify_cached_state(request)
+        return self._process_fetch_token(request, cached_state)
+
+    def extract_id_token(self, request: HttpRequest, id_token: str) -> jwt.Claims:
+        metadata = self.get_openid_configuration()
         keys = self.fetch_key_set()
+        alg_values = metadata['id_token_signing_alg_values_supported']
         try:
-            return jwt.decode(id_token, keys)
+            token = jwt.decode(id_token, keys, algorithms=alg_values)
         except ValueError:
             keys = self.fetch_key_set(force=True)
-            return jwt.decode(id_token, keys)
+            token = jwt.decode(id_token, keys)
+
+        # verify claims
+        claims_options = {
+            'iss': {'essential': True, 'value': metadata['issuer']},
+            'sub': {'essential': True},
+            'email': {'essential': True},
+        }
+        if token.claims.get('nonce_supported'):
+            cached_state = getattr(request, '_cached_state', None)
+            if cached_state and 'nonce' in cached_state:
+                claims_options['nonce'] = {'essential': True, 'value': cached_state['nonce']}
+
+        claims_registry = jwt.JWTClaimsRegistry(
+            leeway=100,
+            **claims_options,
+        )
+        claims_registry.validate(token.claims)
+        return token.claims
 
     @abstractmethod
-    def fetch_userinfo(self, token: OAuth2Token) -> UserInfo:
+    def fetch_userinfo(self, request: HttpRequest, token: OAuth2Token) -> UserInfo:
         pass
 
 
@@ -205,3 +295,9 @@ def add_params_to_uri(uri: str, params: t.Sequence[t.Tuple[str, str]], fragment:
     else:
         query = add_params_to_qs(query, params)
     return urlparse.urlunparse((sch, net, path, par, query, fra))
+
+
+def create_s256_code_challenge(code_verifier: str) -> str:
+    data = hashlib.sha256(to_bytes(code_verifier, 'ascii')).digest()
+    code_challenge = base64.urlsafe_b64encode(data).rstrip(b'=').decode('ascii')
+    return code_challenge

@@ -1,6 +1,6 @@
 {
   "method": "GET",
-  "url": "https://appleid.apple.com/auth/keys",
+  "url": "https://www.googleapis.com/oauth2/v3/certs",
   "json": {
     "keys": [
       {"n": "tF9XEE6bYkRZRTW6Jh6o6FkdsCukSqhM7OEbz17AVNWQCBRWP8nXP6RoF-1ZmXmsj4BpwVzf97al6nXkhB4mIRsNr-bCMk_0b_eYK7sNqszbrqYLeLnlGB_3DUVzXkpKdqVQ8UhqrknqXILPCdR_CBpE0-emYS9vr_Uga1pHREYRG_KFyRCPP_oAPhjEdsf7nCOjV1VCAin0w89cGMfbt1Q7lMuVjwb4G1q5qQRy3hP8jJX-iev5xM7Xg-NsWxstp44cYSzIn4-b06M77fgj7_7qhcAPZ67hmO8BUJhf0rqAIz53UxOq0cIu42tcOZpOdnmXlFwWDeHpAqqn6c9XVQ", "e": "AQAB", "kty": "RSA", "kid": "test-key-id"}

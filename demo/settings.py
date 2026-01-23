@@ -1,5 +1,3 @@
-import os
-
 DEBUG = True
 TESTING = True
 SECRET_KEY = 'django-insecure'
@@ -91,17 +89,9 @@ SAAS_SSO = {
     'PROVIDERS': [
         {
             'backend': 'saas_sso.backends.GoogleProvider',
-            'options': {
-                'client_id': os.getenv('GOOGLE_CLIENT_ID'),
-                'client_secret': os.getenv('GOOGLE_CLIENT_SECRET'),
-            },
         },
         {
             'backend': 'saas_sso.backends.GitHubProvider',
-            'options': {
-                'client_id': os.getenv('GITHUB_CLIENT_ID'),
-                'client_secret': os.getenv('GITHUB_CLIENT_SECRET'),
-            },
         },
     ],
 }
@@ -110,3 +100,5 @@ STATIC_URL = 'static/'
 USE_TZ = True
 TIME_ZONE = 'UTC'
 ROOT_URLCONF = 'demo.urls'
+
+SAAS_SECRETS_FILE = '.secrets'

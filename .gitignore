@@ -18,5 +18,6 @@ htmlcov
 
 # project
 .env
+.secrets
 db.sqlite3
 uv.lock

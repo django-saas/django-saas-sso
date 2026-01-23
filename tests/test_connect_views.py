@@ -1,6 +1,5 @@
 from tests.client import FixturesTestCase
 from saas_sso.models import UserIdentity
-from urllib.parse import urlparse, parse_qs
 
 
 class TestConnectViews(FixturesTestCase):
@@ -10,22 +9,15 @@ class TestConnectViews(FixturesTestCase):
         super().setUp()
         self.force_login()
 
-    def resolve_state(self, url: str) -> str:
-        resp = self.client.get(url)
-        self.assertEqual(resp.status_code, 302)
-        location = resp.get('Location')
-        params = parse_qs(urlparse(location).query)
-        state = params['state'][0]
-        return state
-
     def test_connect_github(self):
-        state = self.resolve_state('/m/connect/link/github/')
+        params = self.resolve_url_params('/m/connect/link/github/')
 
         with self.mock_requests(
             'github_token.json',
             'github_user.json',
             'github_user_primary_emails.json',
         ):
+            state = params['state']
             resp = self.client.get(f'/m/connect/auth/github/?state={state}&code=123')
             self.assertEqual(resp.status_code, 302)
             # Should redirect to default redirect url (login redirect url or next)
@@ -43,12 +35,13 @@ class TestConnectViews(FixturesTestCase):
             profile={},
         )
 
-        state = self.resolve_state('/m/connect/link/google/')
+        params = self.resolve_url_params('/m/connect/link/google/')
 
         with self.mock_requests(
             'google_token.json',
             'google_user.json',
         ):
+            state = params['state']
             resp = self.client.get(f'/m/connect/auth/google/?state={state}&code=123')
             self.assertEqual(resp.status_code, 400)
             self.assertIn(b'already connected to another user', resp.content)

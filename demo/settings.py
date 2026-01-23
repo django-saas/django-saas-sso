@@ -85,6 +85,7 @@ SPECTACULAR_SETTINGS = {
 }
 
 SAAS_SSO = {
+    'AUTO_CREATE_USER': True,
     'TRUST_EMAIL_VERIFIED': True,
     'PROVIDERS': [
         {
